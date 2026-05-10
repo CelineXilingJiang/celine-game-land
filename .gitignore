@@ -1,0 +1,4 @@
+.DS_Store
+__pycache__/
+*.pyc
+food-bowl-rush/scores.json
