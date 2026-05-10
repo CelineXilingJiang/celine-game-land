@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>How We Built Food Bowl Rush!</title>
+<style>
+  @page { size: A4; margin: 1.8cm 2cm; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11pt;
+    color: #222;
+    background: white;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .page {
+    page-break-after: always;
+    min-height: 25cm;
+    padding: 1.2cm 1.5cm;
+    position: relative;
+    overflow: hidden;
+  }
+  .page:last-child {
+    page-break-after: avoid;
+  }
+
+  /* ── COVER ── */
+  .cover {
+    background: linear-gradient(160deg, #16213e 0%, #0f3460 55%, #533483 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.6cm;
+    padding: 2cm 2cm;
+  }
+  .cover-title {
+    font-size: 34pt;
+    font-weight: 900;
+    background: linear-gradient(135deg, #f4a261, #e76f51, #e9c46a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.15;
+  }
+  .cover-subtitle {
+    font-size: 15pt;
+    color: #a8dadc;
+    font-weight: 600;
+  }
+  .cover-date {
+    font-size: 11pt;
+    color: #9db8c4;
+    font-style: italic;
+  }
+  .cover-emojis {
+    font-size: 38pt;
+    letter-spacing: 0.12em;
+    margin: 0.3cm 0;
+  }
+  .cover-screenshot {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    margin-top: 0.4cm;
+    width: 100%;
+    max-width: 14cm;
+  }
+  .cover-screenshot img {
+    width: 100%;
+    display: block;
+  }
+  .cover-badge {
+    background: rgba(233,196,106,0.18);
+    border: 2px solid #e9c46a;
+    border-radius: 30px;
+    padding: 0.18cm 0.8cm;
+    color: #e9c46a;
+    font-size: 10pt;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── CONTENT PAGES ── */
+  .page-content {
+    background: white;
+  }
+
+  h1.page-heading {
+    font-size: 22pt;
+    font-weight: 900;
+    margin-bottom: 0.4cm;
+    line-height: 1.2;
+  }
+  h2.section-heading {
+    font-size: 15pt;
+    font-weight: 800;
+    margin: 0.5cm 0 0.25cm;
+    line-height: 1.2;
+  }
+  h3.sub-heading {
+    font-size: 12pt;
+    font-weight: 700;
+    margin: 0.35cm 0 0.15cm;
+    color: #444;
+  }
+
+  p {
+    line-height: 1.65;
+    margin-bottom: 0.3cm;
+    color: #333;
+  }
+
+  .color-orange  { color: #e76f51; }
+  .color-teal    { color: #2a9d8f; }
+  .color-purple  { color: #7c3aed; }
+  .color-blue    { color: #1d6fa4; }
+  .color-green   { color: #2d6a4f; }
+  .color-red     { color: #e63946; }
+  .color-yellow  { color: #d4a017; }
+
+  /* ── SECTION BANNER ── */
+  .banner {
+    border-radius: 12px;
+    padding: 0.35cm 0.7cm;
+    margin-bottom: 0.45cm;
+    display: flex;
+    align-items: center;
+    gap: 0.3cm;
+  }
+  .banner-orange { background: linear-gradient(135deg, #fff3e8, #ffe0c8); border-left: 5px solid #e76f51; }
+  .banner-blue   { background: linear-gradient(135deg, #e8f4ff, #c8e6ff); border-left: 5px solid #1d6fa4; }
+  .banner-green  { background: linear-gradient(135deg, #e8fff3, #c8ffe6); border-left: 5px solid #2d6a4f; }
+  .banner-purple { background: linear-gradient(135deg, #f3e8ff, #e4c8ff); border-left: 5px solid #7c3aed; }
+  .banner-teal   { background: linear-gradient(135deg, #e8fffd, #c8f7f3); border-left: 5px solid #2a9d8f; }
+  .banner-red    { background: linear-gradient(135deg, #fff0f0, #ffd8d8); border-left: 5px solid #e63946; }
+  .banner-yellow { background: linear-gradient(135deg, #fffde8, #fff3c0); border-left: 5px solid #d4a017; }
+
+  .banner-emoji  { font-size: 22pt; flex-shrink: 0; }
+  .banner-text   { flex: 1; }
+  .banner-title  { font-size: 14pt; font-weight: 800; margin-bottom: 2px; }
+  .banner-desc   { font-size: 9.5pt; color: #555; line-height: 1.4; }
+
+  /* ── SCREENSHOT FRAME ── */
+  .screenshot-frame {
+    border: 3px solid #ddd;
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 0.4cm 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+  .screenshot-frame img {
+    width: 100%;
+    display: block;
+  }
+  .screenshot-caption {
+    background: #f7f7f7;
+    border-top: 1px solid #ddd;
+    padding: 0.15cm 0.4cm;
+    font-size: 8.5pt;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* ── TABLES ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.4cm 0;
+    font-size: 9.5pt;
+  }
+  th {
+    background: linear-gradient(135deg, #1d3557, #457b9d);
+    color: white;
+    padding: 0.2cm 0.3cm;
+    text-align: left;
+    font-weight: 700;
+    font-size: 9pt;
+  }
+  td {
+    padding: 0.18cm 0.3cm;
+    border-bottom: 1px solid #eee;
+    line-height: 1.4;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f9f9fb; }
+  tr:hover td { background: #f0f4ff; }
+  .td-emoji { font-size: 14pt; text-align: center; width: 0.9cm; }
+  .td-trait { font-weight: 700; color: #1d6fa4; white-space: nowrap; }
+  .td-code  { font-family: 'Courier New', monospace; font-size: 8.5pt; color: #7c3aed; background: #f3f0ff; padding: 1px 4px; border-radius: 3px; }
+
+  /* ── FLOW DIAGRAM ── */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25cm;
+    margin: 0.4cm 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    background: linear-gradient(135deg, #1d3557, #457b9d);
+    color: white;
+    border-radius: 10px;
+    padding: 0.25cm 0.5cm;
+    font-size: 10pt;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    font-size: 14pt;
+    color: #e76f51;
+    font-weight: 900;
+  }
+
+  /* ── TRACK DIAGRAM ── */
+  .track-diagram {
+    background: #12121f;
+    border-radius: 12px;
+    padding: 0.5cm 0.8cm;
+    margin: 0.4cm 0;
+    position: relative;
+  }
+  .track-diag-inner {
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    height: 1.2cm;
+    position: relative;
+    overflow: visible;
+  }
+  .track-diag-line {
+    position: absolute;
+    top: 50%;
+    left: 0; right: 0;
+    height: 3px;
+    transform: translateY(-50%);
+    background: repeating-linear-gradient(
+      to right,
+      rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 8px,
+      transparent 8px, transparent 18px
+    );
+  }
+  .track-diag-zone {
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 12%;
+    background: rgba(233,196,106,0.2);
+    border-left: 2px dashed rgba(233,196,106,0.6);
+    border-radius: 0 8px 8px 0;
+  }
+  .track-diag-food {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18pt;
+    line-height: 1;
+  }
+  .track-diag-label {
+    color: rgba(255,255,255,0.6);
+    font-size: 7pt;
+    position: absolute;
+    text-align: center;
+  }
+
+  /* ── CONTROLS BOX ── */
+  .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.3cm;
+    margin: 0.4cm 0;
+  }
+  .ctrl-box {
+    border-radius: 12px;
+    padding: 0.4cm 0.5cm;
+    text-align: center;
+  }
+  .ctrl-key {
+    display: inline-block;
+    background: #1d3557;
+    color: #e9c46a;
+    border-radius: 8px;
+    padding: 0.1cm 0.4cm;
+    font-family: 'Courier New', monospace;
+    font-size: 16pt;
+    font-weight: 900;
+    margin-bottom: 0.15cm;
+    box-shadow: 0 3px 0 #0a1a2e;
+  }
+  .ctrl-label {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #444;
+  }
+  .ctrl-sub {
+    font-size: 8pt;
+    color: #888;
+    margin-top: 2px;
+  }
+
+  /* ── LEARNED BOX ── */
+  .learned-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.35cm;
+    margin: 0.4cm 0;
+  }
+  .learned-box {
+    border-radius: 12px;
+    padding: 0.45cm;
+    text-align: center;
+  }
+  .learned-emoji { font-size: 22pt; display: block; margin-bottom: 0.2cm; }
+  .learned-title { font-size: 11pt; font-weight: 800; margin-bottom: 0.1cm; }
+  .learned-desc  { font-size: 8.5pt; color: #555; line-height: 1.4; }
+
+  .box-orange { background: #fff3e8; border: 2px solid #e76f51; }
+  .box-blue   { background: #e8f4ff; border: 2px solid #1d6fa4; }
+  .box-purple { background: #f3e8ff; border: 2px solid #7c3aed; }
+  .box-teal   { background: #e8fffd; border: 2px solid #2a9d8f; }
+  .box-green  { background: #e8fff3; border: 2px solid #2d6a4f; }
+  .box-red    { background: #fff0f0; border: 2px solid #e63946; }
+
+  /* ── MOM MESSAGE ── */
+  .mom-box {
+    background: linear-gradient(135deg, #fce4ec, #f8bbd0);
+    border: 3px solid #e91e8c;
+    border-radius: 16px;
+    padding: 0.6cm 0.8cm;
+    text-align: center;
+    margin-top: 0.5cm;
+  }
+  .mom-box p { color: #880e4f; font-size: 11.5pt; margin: 0; line-height: 1.6; }
+  .mom-box .mom-title { font-size: 14pt; font-weight: 900; color: #c2185b; margin-bottom: 0.2cm; }
+
+  /* ── PAGE NUMBER ── */
+  .page-num {
+    position: absolute;
+    bottom: 0.5cm;
+    right: 1cm;
+    font-size: 8pt;
+    color: #aaa;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 3px;
+    background: linear-gradient(to right, transparent, currentColor, transparent);
+    margin: 0.4cm 0;
+    border: none;
+    border-radius: 2px;
+  }
+
+  /* ── CALLOUT ── */
+  .callout {
+    border-radius: 10px;
+    padding: 0.3cm 0.6cm;
+    margin: 0.35cm 0;
+    font-size: 10pt;
+    line-height: 1.55;
+  }
+  .callout-fun { background: #fffde8; border-left: 4px solid #ffd43b; color: #7a6200; }
+  .callout-tip { background: #e8f4ff; border-left: 4px solid #1d6fa4; color: #1a3a5c; }
+  .callout-wow { background: #f3e8ff; border-left: 4px solid #7c3aed; color: #4a1d7c; }
+
+  .inline-emoji { font-style: normal; }
+  ul { padding-left: 1.2em; margin: 0.25cm 0; }
+  li { line-height: 1.7; color: #333; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5cm;
+    align-items: start;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 1: COVER
+     ══════════════════════════════════════════════ -->
+<div class="page cover">
+  <div class="cover-badge">A Game Dev Story</div>
+  <div class="cover-title">🍽️ How We Built<br>Food Bowl Rush!</div>
+  <div class="cover-subtitle">A Game Built by Dad &amp; Celine</div>
+  <div class="cover-emojis">🦀 🍜 🍕 🍩 🥣</div>
+  <div class="cover-date">March 2026</div>
+  <div class="cover-screenshot">
+    <img src="file:///tmp/food-bowl-screenshots/screen-1.png" alt="Food Bowl Rush title screen">
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 2: OUR GAME IDEA
+     ══════════════════════════════════════════════ -->
+<div class="page page-content">
+  <div class="banner banner-orange">
+    <div class="banner-emoji">💡</div>
+    <div class="banner-text">
+      <div class="banner-title color-orange">Our Game Idea</div>
+      <div class="banner-desc">Where Food Bowl Rush was born!</div>
+    </div>
+  </div>
+
+  <p>It all started with a question: <strong>"What if food could race?"</strong></p>
+
+  <p>We imagined a world where your favourite foods — crabs, ramen noodles, pizza slices,
+  and even boba tea — could hop along a track trying to land perfectly in a big bowl at the end.
+  Jump too short and you'll never get there. But jump too far... and you OVERSHOOT! 😬</p>
+
+  <h2 class="section-heading color-blue">The Big Idea 🎯</h2>
+
+  <div class="two-col">
+    <div>
+      <div class="callout callout-fun">
+        <strong>🏁 The Race:</strong> Two players each pick a food character.
+        They press their key to make the food jump. First one to land IN the
+        bowl zone wins — but not too far!
+      </div>
+      <div class="callout callout-tip" style="margin-top:0.3cm">
+        <strong>🥣 The Bowl Zone:</strong> There's a golden zone near the end of the
+        track. Land inside it and you win! But go even one pixel further and your
+        food flies off into space. Poof! 💨
+      </div>
+    </div>
+    <div>
+      <div class="callout callout-wow">
+        <strong>✨ Special Powers:</strong> Each food has its own personality.
+        The Crab sometimes shuffles backwards! Sushi gets faster every jump.
+        Donut saves up for a massive 3rd jump. Every food is different!
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-heading color-blue">What Makes It Fun? 🎉</h2>
+  <ul>
+    <li><strong>Randomness</strong> — you never quite know how far you'll jump!</li>
+    <li><strong>Personality</strong> — each food fighter has a unique trick</li>
+    <li><strong>Tension</strong> — when you're close to the bowl, every press matters</li>
+    <li><strong>Laughter</strong> — watching the Crab shuffle backwards is hilarious</li>
+  </ul>
+
+  <div class="screenshot-frame" style="margin-top:0.5cm">
+    <img src="file:///tmp/food-bowl-screenshots/screen-2.png" alt="Food selection screen">
+    <div class="screenshot-caption">The food selection screen — 12 food fighters to choose from!</div>
+  </div>
+  <div class="page-num">2</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 3: STEP 1 — PLANNING
+     ══════════════════════════════════════════════ -->
+<div class="page page-content">
+  <div class="banner banner-blue">
+    <div class="banner-emoji">📋</div>
+    <div class="banner-text">
+      <div class="banner-title color-blue">Step 1: Planning the Game</div>
+      <div class="banner-desc">Before writing code, we figured out what we were building!</div>
+    </div>
+  </div>
+
+  <p>Good games start with good planning. We thought about three big things:</p>
+
+  <div class="flow-row">
+    <div class="flow-box">🦀 The Characters</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">📜 The Rules</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">🎮 The Controls</div>
+  </div>
+
+  <h2 class="section-heading color-blue">Meet the 12 Food Fighters! 🥊</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:0.8cm">Food</th>
+        <th>Name</th>
+        <th>Special Trait</th>
+        <th>What It Does</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="td-emoji">🦀</td>
+        <td><strong>Crab</strong></td>
+        <td class="td-trait">Crabwalk</td>
+        <td>30% chance of shuffling BACKWARDS! 😂</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍜</td>
+        <td><strong>Ramen</strong></td>
+        <td class="td-trait">Slurp Boost</td>
+        <td>Sometimes zooms ahead with a giant speed surge!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍠</td>
+        <td><strong>Sweet Potato</strong></td>
+        <td class="td-trait">Crispy Hop</td>
+        <td>Steady and reliable — always lands close to 9–15 units</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🌮</td>
+        <td><strong>Taco</strong></td>
+        <td class="td-trait">Shell Spin</td>
+        <td>Wildly unpredictable — anywhere from 2 to 26!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍕</td>
+        <td><strong>Pizza</strong></td>
+        <td class="td-trait">Cheese Drag</td>
+        <td>Sometimes gets completely stuck — cheese too gooey!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍣</td>
+        <td><strong>Sushi</strong></td>
+        <td class="td-trait">Rolling Rush</td>
+        <td>Gets faster and faster the more it jumps!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍩</td>
+        <td><strong>Donut</strong></td>
+        <td class="td-trait">Sugar Rush</td>
+        <td>Every 3rd jump is MASSIVE (19–24 units!)</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍔</td>
+        <td><strong>Burger</strong></td>
+        <td class="td-trait">Beef Bounce</td>
+        <td>Big, powerful jumps every time (12–23)</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🌭</td>
+        <td><strong>Corn Dog</strong></td>
+        <td class="td-trait">Stick Launch</td>
+        <td>15% chance of a MEGA launch (23–30 units!)</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🥟</td>
+        <td><strong>Dumpling</strong></td>
+        <td class="td-trait">Steam Pop</td>
+        <td>25% chance of a double jump — two hops in a row!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍦</td>
+        <td><strong>Ice Cream</strong></td>
+        <td class="td-trait">Brain Freeze</td>
+        <td>Sometimes freezes solid — can't move at all!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🧋</td>
+        <td><strong>Boba Tea</strong></td>
+        <td class="td-trait">Bubble Pop</td>
+        <td>Wildest jumps of all — 2 to 27, completely random!</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="page-num">3</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 4: STEP 2 — BUILDING THE SCREENS
+     ══════════════════════════════════════════════ -->
+<div class="page page-content">
+  <div class="banner banner-teal">
+    <div class="banner-emoji">🖥️</div>
+    <div class="banner-text">
+      <div class="banner-title color-teal">Step 2: Building the Screens</div>
+      <div class="banner-desc">Every good game needs multiple screens to guide the player!</div>
+    </div>
+  </div>
+
+  <p>Food Bowl Rush has <strong>5 screens</strong> that players move through. Each screen is a
+  full-page layer that we show or hide with a JavaScript function called
+  <span class="td-code">showScreen()</span>.</p>
+
+  <div class="flow-row" style="justify-content: center;">
+    <div class="flow-box" style="background: linear-gradient(135deg, #533483, #7c3aed)">🍽️ Title</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background: linear-gradient(135deg, #1d3557, #457b9d)">👥 Count</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background: linear-gradient(135deg, #2d6a4f, #40916c)">🦀 Pick Food</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background: linear-gradient(135deg, #7a0000, #e63946)">🏁 Race!</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="background: linear-gradient(135deg, #d4a017, #e9c46a); color: #1a1a00;">🏆 Winner</div>
+  </div>
+
+  <div class="callout callout-tip">
+    <strong>How it works in code:</strong> Every screen is a <span class="td-code">&lt;div class="screen"&gt;</span>
+    in the HTML. By default they're all hidden (<span class="td-code">display: none</span>).
+    Adding the class <span class="td-code">active</span> to one makes it show up. Super simple!
+  </div>
+
+  <h2 class="section-heading color-teal">The Race Screen 🏁</h2>
+  <p>The race screen is the most complex. It builds a "lane" for each player with:</p>
+  <ul>
+    <li>A track with dashed lines and a golden bowl zone on the right</li>
+    <li>A food emoji that slides along the track using CSS transitions</li>
+    <li>A progress bar at the bottom showing how far you've gone</li>
+    <li>A message area that shows your food's special power activating!</li>
+  </ul>
+
+  <div class="screenshot-frame">
+    <img src="file:///tmp/food-bowl-screenshots/screen-3.png" alt="Game screen mid-race">
+    <div class="screenshot-caption">🦀 Crab vs 🍜 Ramen — both racing towards the bowl! Ramen just used a Slurp Boost!</div>
+  </div>
+  <div class="page-num">4</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 5: STEP 3 — THE JUMP MECHANIC
+     ══════════════════════════════════════════════ -->
+<div class="page page-content">
+  <div class="banner banner-green">
+    <div class="banner-emoji">🏃</div>
+    <div class="banner-text">
+      <div class="banner-title color-green">Step 3: The Jump Mechanic</div>
+      <div class="banner-desc">The heart of the game — how each press moves your food!</div>
+    </div>
+  </div>
+
+  <p>Every time you press your key, the game calls a function called
+  <span class="td-code">calcJump()</span> which figures out how far your food will hop this time.
+  Then <span class="td-code">applyJump()</span> moves it and checks whether you won, overshot, or
+  just moved forward!</p>
+
+  <h2 class="section-heading color-green">The Track — How Positions Work 📏</h2>
+  <p>The track is a number line from <strong>0</strong> (start) to <strong>100</strong> (end).
+  Your food lives at a position number. When you jump, we add the jump distance to your position.</p>
+
+  <div class="track-diagram">
+    <div style="color:rgba(255,255,255,0.7); font-size:9pt; margin-bottom:0.25cm; text-align:center; font-weight:700;">
+      🏁 THE RACE TRACK
+    </div>
+    <div class="track-diag-inner">
+      <div class="track-diag-line"></div>
+      <div class="track-diag-zone"></div>
+      <span class="track-diag-food" style="left:2%">🚀</span>
+      <span class="track-diag-food" style="left:38%">🦀</span>
+      <span class="track-diag-food" style="left:55%">🍜</span>
+      <span class="track-diag-food" style="left:77%">🏆</span>
+      <span class="track-diag-food" style="left:88%">🥣</span>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top:0.2cm; padding: 0 0.1cm;">
+      <span style="color:rgba(255,255,255,0.5); font-size:8pt;">pos = 0 (start)</span>
+      <span style="color:#e9c46a; font-size:8pt; font-weight:700;">pos 92–100 = WIN ZONE! 🥣</span>
+      <span style="color:#ff6b6b; font-size:8pt;">pos &gt;100 = OVERSHOOT 💨</span>
+    </div>
+  </div>
+
+  <h2 class="section-heading color-green">Three Things That Can Happen 🎲</h2>
+
+  <div style="display:grid; grid-template-columns: repeat(3,1fr); gap: 0.3cm; margin: 0.3cm 0;">
+    <div class="callout callout-tip" style="margin:0">
+      <strong>✅ Normal Jump</strong><br>
+      <small>pos + jump &lt; 92: Move forward, update progress bar, play boing sound!</small>
+    </div>
+    <div class="callout callout-fun" style="margin:0">
+      <strong>🏆 Win!</strong><br>
+      <small>92 ≤ pos + jump ≤ 100: Land in bowl zone! Play fanfare, show winner screen!</small>
+    </div>
+    <div style="background:#fff0f0; border-left:4px solid #e63946; border-radius:10px; padding:0.3cm 0.6cm; margin:0">
+      <strong style="color:#e63946">💨 Overshoot!</strong><br>
+      <small style="color:#7a2030">pos + jump &gt; 100: Too far! Food flies off screen. Elimination!</small>
+    </div>
+  </div>
+
+  <h2 class="section-heading color-green">Each Food's Jump Style 🍱</h2>
+
+  <div class="callout callout-wow">
+    <strong>"Each food has its own special jump style!"</strong><br>
+    We wrote a big <span class="td-code">switch</span> statement — it's like a set of rules,
+    one for each food. Depending on which food you picked, the jump calculation is completely different.
+    That's what makes the game feel alive and fun!
+  </div>
+  <div class="page-num">5</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 6: STEP 4 — SPECIAL POWERS
+     ══════════════════════════════════════════════ -->
+<div class="page page-content">
+  <div class="banner banner-purple">
+    <div class="banner-emoji">⚡</div>
+    <div class="banner-text">
+      <div class="banner-title color-purple">Step 4: Special Powers in Code</div>
+      <div class="banner-desc">How we turned game ideas into real JavaScript!</div>
+    </div>
+  </div>
+
+  <p>Each food's special power is just a few lines of code inside the
+  <span class="td-code">calcJump()</span> function. Here's how we turned each idea into reality:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Food</th>
+        <th>Special Power</th>
+        <th>How It Works in Code</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="td-emoji">🦀</td>
+        <td class="td-trait">Crabwalk</td>
+        <td>Use <span class="td-code">Math.random() &lt; 0.30</span> — if true, return a <em>negative</em> number to go backwards!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍜</td>
+        <td class="td-trait">Slurp Boost</td>
+        <td>25% chance to multiply the jump by <span class="td-code">× 1.75</span> — that's 75% extra distance!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍠</td>
+        <td class="td-trait">Crispy Hop</td>
+        <td>Narrow random range: <span class="td-code">rnd(9, 15)</span> — always between 9 and 15</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🌮</td>
+        <td class="td-trait">Shell Spin</td>
+        <td>Wide random range: <span class="td-code">rnd(2, 26)</span> — could be tiny or huge!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍕</td>
+        <td class="td-trait">Cheese Drag</td>
+        <td>25% chance to return <span class="td-code">0</span> — zero movement, completely stuck!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍣</td>
+        <td class="td-trait">Rolling Rush</td>
+        <td>Track how many jumps: <span class="td-code">bonus = jumps × 1.6</span>. More jumps = faster! (capped at +13)</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍩</td>
+        <td class="td-trait">Sugar Rush</td>
+        <td>Check <span class="td-code">jumps % 3 === 2</span> — every third jump triggers the big one (19–24)!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🌭</td>
+        <td class="td-trait">Stick Launch</td>
+        <td>15% chance (<span class="td-code">Math.random() &lt; 0.15</span>) for a mega jump of 23–30</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🥟</td>
+        <td class="td-trait">Steam Pop</td>
+        <td>Return an <em>array</em> <span class="td-code">[jump1, jump2]</span> — the game detects this and fires two jumps!</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🍦</td>
+        <td class="td-trait">Brain Freeze</td>
+        <td>Set a <span class="td-code">_frozen = true</span> flag — the game checks this first and plays freeze animation</td>
+      </tr>
+      <tr>
+        <td class="td-emoji">🧋</td>
+        <td class="td-trait">Bubble Pop</td>
+        <td>Widest range of all: <span class="td-code">rnd(2, 27)</span> — pure chaos! 🫧</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-fun" style="margin-top:0.4cm">
+    <strong>🍩 Fun fact about Sushi:</strong> "Sushi gets faster each jump because we add a bonus each time!
+    The formula is <span class="td-code">bonus = jumps × 1.6</span>, but we cap it at 13 so it doesn't
+    get TOO crazy. Early in the race Sushi is slow — but near the end, watch out!"
+  </div>
+  <div class="page-num">6</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 7: HOW TO PLAY
+     ══════════════════════════════════════════════ -->
+<div class="page page-content">
+  <div class="banner banner-red">
+    <div class="banner-emoji">🎮</div>
+    <div class="banner-text">
+      <div class="banner-title color-red">How to Play Food Bowl Rush!</div>
+      <div class="banner-desc">Everything you need to know in one page!</div>
+    </div>
+  </div>
+
+  <p>Food Bowl Rush is super easy to learn. Here are all the controls:</p>
+
+  <h2 class="section-heading color-red">Controls for 2 Players 🕹️</h2>
+  <div class="controls-grid">
+    <div class="ctrl-box box-red">
+      <div class="ctrl-key">A</div>
+      <div class="ctrl-label">Player 1 Jump</div>
+      <div class="ctrl-sub">Team Red 🔴</div>
+    </div>
+    <div class="ctrl-box box-blue">
+      <div class="ctrl-key">L</div>
+      <div class="ctrl-label">Player 2 Jump</div>
+      <div class="ctrl-sub">Team Blue 🔵</div>
+    </div>
+    <div class="ctrl-box box-green">
+      <div class="ctrl-key">↩</div>
+      <div class="ctrl-label">Play Again</div>
+      <div class="ctrl-sub">After game ends</div>
+    </div>
+  </div>
+
+  <h2 class="section-heading color-red" style="margin-top:0.3cm">Quick Rules 📜</h2>
+  <ul>
+    <li><strong>Pick your food fighter</strong> — each one has a unique jumping style</li>
+    <li><strong>Press your key</strong> to make your food hop down the track</li>
+    <li><strong>Land in the golden bowl zone</strong> (between position 92 and 100) to WIN</li>
+    <li><strong>Don't overshoot!</strong> Going past position 100 means you're eliminated</li>
+    <li>There's a <strong>cooldown</strong> between jumps — no button mashing! (380ms)</li>
+    <li>In 4 or 6 player mode, it's <strong>team vs team</strong> — whole team must be out to lose</li>
+  </ul>
+
+  <h2 class="section-heading color-red" style="margin-top:0.3cm">The Winner Screen 🏆</h2>
+  <div class="two-col">
+    <div>
+      <p>When someone wins, the game shows the winner screen with:</p>
+      <ul>
+        <li>The winning food emoji bouncing up and down 🎉</li>
+        <li>Confetti raining down in all colours</li>
+        <li>A fun fanfare sound (ascending musical notes!)</li>
+        <li>The food's name and which player gets the bowl</li>
+      </ul>
+    </div>
+    <div>
+      <div class="screenshot-frame">
+        <img src="file:///tmp/food-bowl-screenshots/screen-4.png" alt="Winner screen">
+        <div class="screenshot-caption">🦀 Crab wins the bowl!</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-num">7</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 8: WHAT WE LEARNED
+     ══════════════════════════════════════════════ -->
+<div class="page page-content">
+  <div class="banner banner-yellow">
+    <div class="banner-emoji">🌟</div>
+    <div class="banner-text">
+      <div class="banner-title color-yellow">What We Learned!</div>
+      <div class="banner-desc">"We built a whole game in one afternoon!"</div>
+    </div>
+  </div>
+
+  <p>Building Food Bowl Rush taught us so many things about how computers and games work.
+  Here are the big ideas we picked up:</p>
+
+  <div class="learned-grid">
+    <div class="learned-box box-orange">
+      <span class="learned-emoji">🏗️</span>
+      <div class="learned-title color-orange">HTML</div>
+      <div class="learned-desc">HTML is the skeleton of a webpage. We used it to create all the buttons,
+      screens, tracks, and food emojis.</div>
+    </div>
+    <div class="learned-box box-blue">
+      <span class="learned-emoji">🎨</span>
+      <div class="learned-title color-blue">CSS</div>
+      <div class="learned-desc">CSS makes things look beautiful. We used gradients, animations,
+      and transitions to bring the game to life!</div>
+    </div>
+    <div class="learned-box box-purple">
+      <span class="learned-emoji">⚡</span>
+      <div class="learned-title color-purple">JavaScript</div>
+      <div class="learned-desc">JS makes things happen. Key presses, jumps, random numbers,
+      timers — all JavaScript!</div>
+    </div>
+    <div class="learned-box box-teal">
+      <span class="learned-emoji">🎲</span>
+      <div class="learned-title color-teal">Randomness</div>
+      <div class="learned-desc"><span class="td-code">Math.random()</span> gives a number between
+      0 and 1. We use it to make every jump feel different and exciting!</div>
+    </div>
+    <div class="learned-box box-green">
+      <span class="learned-emoji">🔊</span>
+      <div class="learned-title color-green">Web Audio</div>
+      <div class="learned-desc">We made all the sounds using the Web Audio API — no sound files needed!
+      We built boing sounds from scratch using oscillators.</div>
+    </div>
+    <div class="learned-box box-red">
+      <span class="learned-emoji">🎮</span>
+      <div class="learned-title color-red">Game Design</div>
+      <div class="learned-desc">We learned that good games need clear rules, fair chances,
+      and moments of surprise. Food Bowl Rush has all three!</div>
+    </div>
+  </div>
+
+  <div class="callout callout-wow" style="margin-top:0.4cm">
+    <strong>🚀 The coolest thing we built:</strong> The sound effects are made entirely in code using
+    <em>oscillators</em> — these are mathematical waves that make different pitches.
+    The "boing" sound starts at a high pitch (280 Hz) and drops to a low pitch (140 Hz)
+    really fast. That falling pitch is what makes it sound bouncy!
+  </div>
+
+  <div class="mom-box">
+    <div class="mom-title">💌 A Message for Mom</div>
+    <p>
+      "Mom, we built this game together as a team! Dad helped with the code and Celine came up with
+      the ideas. Did you know the Crab can walk backwards? That was Celine's idea!
+      We hope you have fun playing Food Bowl Rush.
+      We love you! 🦀🍜🥣"
+    </p>
+  </div>
+
+  <div style="text-align:center; margin-top:0.5cm; font-size:9pt; color:#aaa; font-style:italic;">
+    Food Bowl Rush — Built with love in March 2026 🍽️
+  </div>
+  <div class="page-num">8</div>
+</div>
+
+</body>
+</html>

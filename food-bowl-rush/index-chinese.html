@@ -1,0 +1,3086 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>美食大冲关！</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #1a0808;
+  color: white;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── SCREENS ── */
+.screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.screen.active { display: flex; }
+
+/* ── TITLE ── */
+#screen-title {
+  background: radial-gradient(ellipse at center, #1a0505 0%, #3a0e0e 60%, #6b1e1e 100%);
+  text-align: center;
+  gap: 1rem;
+}
+.title-main {
+  font-size: clamp(2.5rem, 8vw, 5.5rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #ffd700, #e63946, #ffa500);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+}
+.title-sub {
+  font-size: clamp(0.9rem, 2.5vw, 1.3rem);
+  color: #f4c87a;
+  margin-bottom: 1.5rem;
+}
+.floating-foods {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.floating-food {
+  position: absolute;
+  animation: float-up linear infinite;
+  opacity: 0.25;
+  bottom: -10vh;
+}
+@keyframes float-up {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 0.25; }
+  100% { transform: translateY(-120vh) rotate(360deg); opacity: 0; }
+}
+
+/* ── BUTTONS ── */
+.btn {
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  padding: 1rem 3rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  box-shadow: 0 6px 20px rgba(192,57,43,0.4);
+}
+.btn:hover { transform: translateY(-3px); box-shadow: 0 9px 28px rgba(192,57,43,0.5); }
+.btn:active { transform: translateY(0); }
+.btn-green {
+  background: linear-gradient(135deg, #2d6a4f, #40916c);
+  box-shadow: 0 6px 20px rgba(45,106,79,0.4);
+}
+.btn-green:hover { box-shadow: 0 9px 28px rgba(45,106,79,0.5); }
+
+/* ── PLAYER COUNT ── */
+#screen-count {
+  background: radial-gradient(ellipse at center, #0d0a08 0%, #1a1208 100%);
+  gap: 2rem;
+}
+#screen-difficulty {
+  background: radial-gradient(ellipse at center, #0d0a08 0%, #1a1208 100%);
+  gap: 2rem;
+}
+.count-title {
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  font-weight: 800;
+  color: #ffd700;
+}
+.count-options {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.count-option {
+  background: rgba(255,255,255,0.05);
+  border: 3px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 2rem 2.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  min-width: 160px;
+}
+.count-option:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: #ffd700;
+  transform: translateY(-5px);
+}
+.count-num { font-size: 3.5rem; font-weight: 900; color: #ffd700; display: block; }
+.count-label { font-size: 1rem; color: #ccc; margin-top: 0.4rem; }
+.count-mode { font-size: 0.85rem; color: #888; margin-top: 0.2rem; }
+
+/* ── FOOD SELECT ── */
+#screen-food-select {
+  background: radial-gradient(ellipse at center, #0d0a08 0%, #1a1208 100%);
+  gap: 0.8rem;
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding-top: 1.5rem;
+}
+.select-header { text-align: center; }
+.select-player-title {
+  font-size: clamp(1.1rem, 3vw, 1.8rem);
+  font-weight: 800;
+  margin-bottom: 0.2rem;
+}
+.select-instruction { font-size: 0.9rem; color: #f4c87a; margin-bottom: 0.5rem; }
+
+.selection-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 0.3rem;
+}
+.sel-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.2);
+}
+.sel-dot.done { background: #51cf66; border-color: #51cf66; }
+.sel-dot.current { background: #ffd700; border-color: #ffd700; animation: pulse-dot 0.9s infinite; }
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+}
+
+.food-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 820px;
+}
+.food-card {
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 0.85rem 0.6rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.food-card:hover:not(.taken) {
+  background: rgba(255,255,255,0.12);
+  transform: translateY(-3px);
+  border-color: rgba(255,255,255,0.35);
+}
+.food-card.taken { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+.food-card-emoji { font-size: 2.4rem; display: block; margin-bottom: 0.25rem; }
+.food-card-name { font-size: 0.8rem; font-weight: 700; color: white; }
+.food-card-trait { font-size: 0.68rem; font-weight: 700; color: #ffd700; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 0.15rem; }
+.food-card-desc { font-size: 0.62rem; color: #f4c87a; margin-top: 0.1rem; line-height: 1.3; }
+
+/* ── GAME SCREEN ── */
+#screen-game {
+  background: #0d0808;
+  justify-content: flex-start;
+  padding: 0.75rem 1rem;
+  gap: 0.5rem;
+  overflow: hidden;
+}
+.game-header { text-align: center; width: 100%; flex-shrink: 0; }
+.game-title {
+  font-size: clamp(1rem, 2.5vw, 1.6rem);
+  font-weight: 900;
+  color: #ffd700;
+  letter-spacing: 1px;
+}
+.controls-bar {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.3rem;
+}
+.ctrl-chip {
+  background: rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  color: #bbb;
+}
+.ctrl-chip b { color: #ffd700; font-family: monospace; }
+
+.lanes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── REPLAY ── */
+.replay-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 0.3rem;
+}
+.replay-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  color: white;
+  padding: 3px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.replay-btn:hover { background: rgba(255,255,255,0.22); }
+.replay-btn.active { background: #ffd700; color: #1a0808; border-color: #ffd700; }
+.replay-btn.exit-btn { border-color: rgba(255,100,100,0.4); }
+.replay-btn.exit-btn:hover { background: rgba(255,100,100,0.25); }
+.replay-speed-label { font-size: 0.72rem; color: #666; }
+.replay-progress-wrap {
+  width: 160px;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.replay-progress-fill {
+  height: 100%;
+  background: #ffd700;
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+/* ── COUNTDOWN OVERLAY ── */
+#countdown-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 5, 5, 0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+  gap: 0.5rem;
+}
+#countdown-overlay.active { opacity: 1; pointer-events: all; }
+#countdown-overlay.fade-out { opacity: 0; }
+
+.cd-number {
+  font-size: clamp(8rem, 25vw, 18rem);
+  font-weight: 900;
+  color: #ffd700;
+  line-height: 1;
+  animation: cd-pop 0.95s ease-out forwards;
+  text-shadow: 0 0 60px rgba(255,215,0,0.5);
+}
+.cd-go {
+  font-size: clamp(4rem, 14vw, 10rem);
+  font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(135deg, #ffd700, #e63946, #ffa500);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: cd-go-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+.cd-subtitle {
+  font-size: clamp(1.2rem, 4vw, 2.5rem);
+  font-weight: 800;
+  color: #f4c87a;
+  letter-spacing: 3px;
+  animation: cd-go-pop 0.5s 0.1s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes cd-pop {
+  0%   { transform: scale(2.2); opacity: 0; }
+  15%  { transform: scale(0.9); opacity: 1; }
+  30%  { transform: scale(1.05); }
+  45%  { transform: scale(1); }
+  80%  { transform: scale(1);   opacity: 1; }
+  100% { transform: scale(0.6); opacity: 0; }
+}
+@keyframes cd-go-pop {
+  0%   { transform: scale(0.3); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* ── PLAYER LANE ── */
+.player-lane {
+  background: rgba(255,255,255,0.04);
+  border: 2px solid rgba(255,255,255,0.07);
+  border-left: 5px solid;
+  border-radius: 14px;
+  padding: 0.6rem 0.9rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: background 0.2s;
+  min-height: 0;
+}
+.player-lane.team-a { border-left-color: #e63946; }
+.player-lane.team-b { border-left-color: #457b9d; }
+.player-lane.team-c { border-left-color: #2d6a4f; }
+.player-lane.won-lane { background: rgba(255,215,0,0.14); border-color: #ffd700 !important; animation: won-glow 0.9s ease-in-out infinite; }
+.player-lane.done-lane { background: rgba(116,192,252,0.08); border-color: #74c0fc !important; opacity: 0.8; }
+@keyframes won-glow {
+  0%,100% { box-shadow: 0 0 12px rgba(255,215,0,0.3); }
+  50%      { box-shadow: 0 0 32px rgba(255,215,0,0.65); }
+}
+.player-lane.won-lane .prog-fill { background: linear-gradient(to right, #ffd700, #ffec6e) !important; }
+.player-lane.done-lane .prog-fill { background: linear-gradient(to right, #74c0fc, #a5d8ff) !important; }
+.player-lane.eliminated-lane { opacity: 0.45; }
+.player-lane.flash-press { background: rgba(255,255,255,0.09); }
+
+.lane-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.lane-emoji { font-size: 1.3rem; line-height: 1; }
+.lane-name { font-size: 0.8rem; font-weight: 700; }
+.lane-key {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: monospace;
+  color: #ffd700;
+}
+.lane-msg {
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: auto;
+  min-width: 120px;
+  text-align: right;
+  transition: opacity 0.3s;
+}
+.lane-msg.won-msg { color: #ffd700; }
+.lane-msg.out-msg { color: #ff6b6b; }
+.lane-msg.info-msg { color: #74c0fc; }
+
+/* ── TRACK ── */
+.track-wrap {
+  position: relative;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  overflow: visible;
+  margin-bottom: 0.35rem;
+}
+.track-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.track-bowl {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 1.7rem;
+  z-index: 2;
+  line-height: 1;
+}
+.track-food {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 1.7rem;
+  line-height: 1;
+  z-index: 3;
+  transition: left 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              top 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: left, top, transform;
+}
+
+/* ── JUMP ANIMATIONS ── */
+@keyframes jump-bounce {
+  0%   { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  18%  { transform: translate(-50%, calc(-50% - 48px)) scale(1.2) rotate(-22deg); }
+  42%  { transform: translate(-50%, calc(-50% - 28px)) scale(1.1) rotate(14deg); }
+  68%  { transform: translate(-50%, calc(-50% - 8px)) scale(1.04) rotate(-6deg); }
+  84%  { transform: translate(-50%, calc(-50% + 5px)) scale(0.97); }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+}
+@keyframes overshoot-fly {
+  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  25%  { transform: translate(-50%, calc(-50% - 70px)) scale(1.4) rotate(200deg); opacity: 1; }
+  65%  { transform: translate(-50%, calc(-50% - 35px)) scale(0.7) rotate(420deg); opacity: 0.7; }
+  100% { transform: translate(-50%, calc(-50% + 90px)) scale(0.1) rotate(720deg); opacity: 0; }
+}
+@keyframes win-dance {
+  0%,100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  20%     { transform: translate(-50%, calc(-50% - 28px)) scale(1.3) rotate(-18deg); }
+  50%     { transform: translate(-50%, -50%) scale(1.15) rotate(18deg); }
+  75%     { transform: translate(-50%, calc(-50% - 18px)) scale(1.25) rotate(-12deg); }
+}
+@keyframes freeze-shake {
+  0%,100% { transform: translate(-50%, -50%); filter: drop-shadow(0 0 8px #74c0fc); }
+  25%     { transform: translate(calc(-50% - 5px), -50%); filter: drop-shadow(0 0 12px #74c0fc); }
+  75%     { transform: translate(calc(-50% + 5px), -50%); filter: drop-shadow(0 0 12px #74c0fc); }
+}
+
+/* Track selection screen */
+#screen-track {
+  background: radial-gradient(ellipse at center, #0d0a08 0%, #1a1208 100%);
+  gap: 1rem;
+  overflow-y: auto;
+  padding-top: 1.5rem;
+  justify-content: flex-start;
+}
+.track-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 820px;
+}
+.track-card {
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 0.85rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.track-card:hover {
+  background: rgba(255,255,255,0.12);
+  transform: translateY(-3px);
+}
+.track-card-preview {
+  width: 100%;
+  height: 50px;
+  margin-bottom: 0.4rem;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.2);
+  overflow: visible;
+}
+.track-card-name { font-size: 0.85rem; font-weight: 700; color: white; }
+.track-card-desc { font-size: 0.65rem; color: #f4c87a; margin-top: 0.15rem; }
+.track-food.anim-jump      { animation: jump-bounce  0.42s ease-out; }
+.track-food.anim-overshoot { animation: overshoot-fly 0.65s ease-in forwards; }
+.track-food.anim-win       { animation: win-dance    0.55s ease-in-out infinite; }
+.track-food.anim-freeze    { animation: freeze-shake 0.38s ease-in-out 2; }
+
+/* ── PROGRESS BAR ── */
+.prog-wrap {
+  height: 8px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 0.35rem;
+}
+.prog-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.35s ease;
+  width: 0%;
+}
+.player-lane.team-a .prog-fill { background: linear-gradient(to right, #e63946, #ff6b6b); }
+.player-lane.team-b .prog-fill { background: linear-gradient(to right, #457b9d, #74c0fc); }
+.player-lane.team-c .prog-fill { background: linear-gradient(to right, #2d6a4f, #51cf66); }
+
+/* ── WINNER ── */
+#screen-winner {
+  background: radial-gradient(ellipse at center, #0d0808 0%, #1a0808 100%);
+  text-align: center;
+  gap: 1.2rem;
+}
+.winner-label { font-size: 1.1rem; color: #f4c87a; text-transform: uppercase; letter-spacing: 3px; }
+.winner-food-big {
+  font-size: clamp(5rem, 18vw, 10rem);
+  animation: winner-float 0.7s ease-in-out infinite alternate;
+  line-height: 1;
+}
+@keyframes winner-float {
+  from { transform: scale(1)    translateY(0); }
+  to   { transform: scale(1.12) translateY(-16px); }
+}
+.winner-food-name { font-size: clamp(1.5rem, 5vw, 3rem); font-weight: 900; }
+.winner-team-name { font-size: clamp(1rem, 3vw, 1.5rem); font-weight: 700; color: #ffd700; }
+
+/* ── LEADERBOARD (on title) ── */
+.leaderboard {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 16px;
+  padding: 0.9rem 1.4rem;
+  min-width: 300px;
+  margin-top: 0.2rem;
+}
+.lb-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #ffd700;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.85rem;
+}
+.lb-row:last-child { border-bottom: none; }
+.lb-rank { font-size: 1rem; width: 1.6rem; text-align: center; }
+.lb-avatar { font-size: 1.3rem; }
+.lb-pname { font-weight: 700; flex: 1; }
+.lb-wins { color: #ffd700; font-weight: 700; font-size: 0.85rem; }
+.lb-wins small { color: #666; font-size: 0.7rem; font-weight: 400; }
+
+/* ── PROFILE SELECT ── */
+#screen-profile {
+  background: radial-gradient(ellipse at center, #0d0a08 0%, #1a1208 100%);
+  gap: 1.5rem;
+}
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  width: 100%;
+  max-width: 700px;
+}
+.profile-card {
+  background: rgba(255,255,255,0.06);
+  border: 3px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 1.4rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  position: relative;
+}
+.profile-card:hover:not(.taken) {
+  background: rgba(255,255,255,0.13);
+  transform: translateY(-4px);
+  border-color: rgba(255,255,255,0.3);
+}
+.profile-card.taken { opacity: 0.28; cursor: not-allowed; pointer-events: none; }
+.profile-avatar { font-size: 3.2rem; display: block; margin-bottom: 0.35rem; line-height: 1; }
+.profile-pname { font-size: 1.15rem; font-weight: 800; }
+.profile-wins-badge {
+  font-size: 0.72rem;
+  color: #ffd700;
+  margin-top: 0.2rem;
+  font-weight: 600;
+}
+.profile-delete-btn {
+  position: absolute;
+  top: 6px; right: 8px;
+  background: none; border: none;
+  color: rgba(255,255,255,0.3);
+  cursor: pointer; font-size: 0.75rem;
+  padding: 0; line-height: 1;
+  transition: color 0.2s;
+}
+.profile-delete-btn:hover { color: #ff6b6b; }
+.profile-edit-btn {
+  position: absolute;
+  top: 6px; left: 8px;
+  background: none; border: none;
+  color: rgba(255,255,255,0.3);
+  cursor: pointer; font-size: 0.75rem;
+  padding: 0; line-height: 1;
+  transition: color 0.2s;
+}
+.profile-edit-btn:hover { color: #74c0fc; }
+.profile-add-card {
+  background: rgba(255,255,255,0.04);
+  border: 3px dashed rgba(255,255,255,0.2);
+  border-radius: 20px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0.4rem; padding: 1rem; cursor: pointer;
+  transition: all 0.2s; min-height: 110px;
+  color: rgba(255,255,255,0.4); font-size: 0.85rem;
+}
+.profile-add-card:hover {
+  border-color: rgba(255,255,255,0.5);
+  color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.08);
+}
+#profile-modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75); z-index: 1000;
+  align-items: center; justify-content: center;
+}
+#profile-modal-overlay.active { display: flex; }
+#profile-modal {
+  background: #1a0505;
+  border: 2px solid rgba(255,215,0,0.3);
+  border-radius: 24px; padding: 2rem;
+  width: 90%; max-width: 400px;
+  display: flex; flex-direction: column; gap: 1.2rem;
+}
+.pm-title { font-size: 1.3rem; font-weight: bold; color: #ffd700; text-align: center; }
+.pm-label { font-size: 0.8rem; color: rgba(255,215,0,0.5); margin-bottom: 0.3rem; }
+#pm-name-input {
+  width: 100%; background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 10px; color: #fff;
+  font-size: 1rem; padding: 0.6rem 0.8rem;
+  outline: none; box-sizing: border-box;
+}
+#pm-name-input:focus { border-color: rgba(255,215,0,0.7); }
+.pm-emoji-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.pm-emoji-btn {
+  background: rgba(255,255,255,0.06);
+  border: 2px solid transparent; border-radius: 8px;
+  font-size: 1.35rem; cursor: pointer; padding: 4px;
+  text-align: center; transition: all 0.15s;
+}
+.pm-emoji-btn:hover { background: rgba(255,255,255,0.15); }
+.pm-emoji-btn.selected { border-color: #ffd700; background: rgba(255,215,0,0.15); }
+.pm-color-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+.pm-color-swatch {
+  width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer; border: 3px solid transparent; transition: all 0.15s;
+}
+.pm-color-swatch.selected { border-color: #ffd700; transform: scale(1.2); }
+.pm-buttons { display: flex; gap: 0.8rem; }
+.pm-btn-cancel {
+  flex: 1; background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 12px; color: rgba(255,255,255,0.6);
+  font-size: 1rem; padding: 0.7rem; cursor: pointer;
+}
+.pm-btn-save {
+  flex: 2; background: linear-gradient(135deg, #ffd700, #ff8c00);
+  border: none; border-radius: 12px; color: #1a0505;
+  font-size: 1rem; font-weight: bold; padding: 0.7rem; cursor: pointer;
+}
+
+/* ── CONFETTI ── */
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.confetti-layer + * { position: relative; z-index: 1; }
+.conf-bit {
+  position: absolute;
+  top: -20px;
+  border-radius: 2px;
+  animation: conf-fall linear forwards;
+}
+@keyframes conf-fall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0.3; }
+}
+
+/* ── PARENTAL CONTROLS SCREENS ── */
+#screen-parental {
+  background: radial-gradient(ellipse at center, #0d0a08 0%, #1a1208 100%);
+  gap: 1.5rem;
+}
+.parental-title { font-size: clamp(1.3rem, 4vw, 2rem); font-weight: 800; color: #ffd700; text-align: center; }
+.parental-sub { font-size: 0.88rem; color: #f4c87a; text-align: center; max-width: 420px; line-height: 1.5; }
+.parental-title-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  color: #999;
+  font-size: 0.75rem;
+  padding: 4px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.3rem;
+}
+.parental-title-btn:hover { color: #ffd700; border-color: #ffd700; }
+#screen-locked {
+  background: radial-gradient(ellipse at center, #0d0a08 0%, #1a1208 100%);
+  gap: 1.2rem;
+  text-align: center;
+}
+.locked-icon { font-size: 5rem; display: block; animation: lock-wiggle 3s ease-in-out infinite; }
+@keyframes lock-wiggle {
+  0%,88%,100% { transform: rotate(0deg); }
+  91% { transform: rotate(-10deg); }
+  95% { transform: rotate(10deg); }
+}
+.locked-title { font-size: clamp(1.4rem, 4vw, 2.2rem); font-weight: 900; color: #ff6b6b; }
+.locked-sub { font-size: 1rem; color: #f4c87a; max-width: 360px; line-height: 1.5; }
+.locked-count { font-size: 0.85rem; color: #666; }
+#screen-parent-unlock {
+  background: radial-gradient(ellipse at center, #0d0a08 0%, #1a1208 100%);
+  gap: 1rem;
+  overflow-y: auto;
+  padding: 1.5rem 1rem;
+  justify-content: flex-start;
+}
+.quiz-header { text-align: center; }
+.quiz-title { font-size: clamp(1.2rem, 3.5vw, 1.8rem); font-weight: 800; color: #74c0fc; }
+.quiz-sub { font-size: 0.82rem; color: #f4c87a; margin-top: 0.2rem; }
+.quiz-question {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  width: 100%;
+  max-width: 580px;
+}
+.quiz-q-text { font-size: 0.92rem; font-weight: 700; color: white; margin-bottom: 0.6rem; line-height: 1.4; }
+.quiz-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+.quiz-opt {
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: #ccc;
+  padding: 0.5rem 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.quiz-opt:hover:not(:disabled) { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.28); color: white; }
+.quiz-opt.selected { background: rgba(255,215,0,0.18); border-color: #ffd700; color: #ffd700; }
+.quiz-opt.correct  { background: rgba(81,207,102,0.22) !important; border-color: #51cf66 !important; color: #51cf66 !important; }
+.quiz-opt.wrong    { background: rgba(255,107,107,0.22) !important; border-color: #ff6b6b !important; color: #ff6b6b !important; }
+.quiz-result { text-align: center; font-size: 1rem; font-weight: 700; min-height: 1.5rem; }
+
+/* ── LANGUAGE SELECT ── */
+#screen-lang {
+  background: radial-gradient(ellipse at center, #0d0d1a 0%, #1a1a2e 100%);
+  gap: 2rem;
+}
+.lang-title {
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  text-align: center;
+  line-height: 1.2;
+}
+.lang-options {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.lang-card {
+  background: rgba(255,255,255,0.06);
+  border: 3px solid rgba(255,255,255,0.12);
+  border-radius: 24px;
+  padding: 2.5rem 3rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  min-width: 180px;
+}
+.lang-card:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.4);
+  transform: translateY(-6px);
+}
+.lang-flag { font-size: 4rem; display: block; margin-bottom: 0.6rem; }
+.lang-name { font-size: 1.6rem; font-weight: 800; color: white; }
+.lang-sub  { font-size: 0.85rem; color: #888; margin-top: 0.3rem; }
+
+/* ── CAMERA RECORDING ── */
+#cam-container {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 100;
+  display: none;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+}
+#cam-container.active { display: block; }
+#cam-preview {
+  width: 160px;
+  height: 120px;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1);
+  background: #000;
+}
+#cam-container.minimized #cam-preview { width: 64px; height: 48px; }
+.cam-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  gap: 4px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.65), transparent);
+}
+.rec-dot {
+  width: 8px; height: 8px;
+  background: #ff3b30;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: rec-blink 1.2s ease-in-out infinite;
+}
+@keyframes rec-blink {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.15; }
+}
+.rec-label { font-size: 0.6rem; font-weight: 800; color: white; letter-spacing: 1px; flex: 1; }
+.cam-min-btn {
+  background: rgba(255,255,255,0.18);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.cam-min-btn:hover { background: rgba(255,255,255,0.35); }
+#cam-denied-toast {
+  position: fixed;
+  top: 1rem; left: 50%; transform: translateX(-50%);
+  background: rgba(40,10,10,0.95);
+  border: 1px solid rgba(255,215,0,0.25);
+  border-radius: 12px;
+  padding: 0.7rem 1.2rem;
+  color: #fff; font-size: 0.85rem;
+  z-index: 200; display: none;
+  gap: 0.6rem; align-items: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  max-width: 90vw; text-align: center;
+}
+#cam-denied-toast.show { display: flex; }
+
+/* ── RECORD CONSENT ── */
+#screen-record-consent {
+  background: radial-gradient(ellipse at center, #0d0a05 0%, #1a0a00 100%);
+  gap: 2rem;
+}
+.rec-consent-title { font-size: 2rem; font-weight: 900; color: #fff; text-align: center; }
+.rec-consent-sub { font-size: 1rem; color: rgba(255,255,255,0.55); text-align: center; max-width: 380px; line-height: 1.5; }
+.rec-consent-options { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; }
+.rec-consent-card {
+  background: rgba(255,255,255,0.06); border: 3px solid rgba(255,255,255,0.12);
+  border-radius: 24px; padding: 2rem 2.5rem; cursor: pointer; transition: all 0.2s;
+  display: flex; flex-direction: column; align-items: center; gap: 0.7rem; min-width: 190px;
+}
+.rec-consent-card:hover { background: rgba(255,255,255,0.12); transform: translateY(-4px); }
+.rec-consent-card.rec-yes { border-color: rgba(255,59,48,0.4); }
+.rec-consent-card.rec-yes:hover { border-color: #ff3b30; box-shadow: 0 8px 32px rgba(255,59,48,0.3); }
+.rec-consent-icon { font-size: 3rem; }
+.rec-consent-label { font-size: 1.1rem; font-weight: 800; color: #fff; }
+.rec-consent-note { font-size: 0.72rem; color: rgba(255,255,255,0.4); text-align: center; }
+/* ── PLAYLIST ── */
+.playlist-section { width: 100%; max-width: 560px; margin-top: 0.5rem; }
+.playlist-heading { font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; text-align: center; }
+.playlist-item {
+  display: flex; align-items: center; gap: 0.9rem;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px; padding: 0.6rem 0.9rem; margin-bottom: 0.45rem;
+  cursor: pointer; transition: all 0.2s;
+}
+.playlist-item:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+.playlist-thumb { width: 80px; height: 45px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: #000; }
+.playlist-info { flex: 1; min-width: 0; text-align: left; }
+.playlist-date { font-size: 0.65rem; color: rgba(255,255,255,0.35); margin-bottom: 2px; }
+.playlist-players { font-size: 0.9rem; }
+.playlist-winner { font-size: 0.72rem; color: #ffd43b; font-weight: 600; margin-top: 1px; }
+.playlist-del { background: none; border: none; color: rgba(255,255,255,0.2); font-size: 1.1rem; cursor: pointer; padding: 4px 6px; line-height: 1; flex-shrink: 0; transition: color 0.2s; }
+.playlist-del:hover { color: #ff6b6b; }
+/* ── VIDEO MODAL ── */
+#video-modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.93); z-index: 2000;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+}
+#video-modal.active { display: flex; }
+#video-modal-player { max-width: 90vw; max-height: 78vh; border-radius: 12px; background: #000; outline: none; }
+.vm-close { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; color: #fff; font-size: 0.9rem; padding: 0.5rem 1.6rem; cursor: pointer; transition: background 0.2s; }
+.vm-close:hover { background: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+
+<!-- ============ LANGUAGE SELECT ============ -->
+<div id="screen-lang" class="screen active">
+  <div style="position:absolute;top:1rem;left:1rem;z-index:10;">
+    <a href="/" style="background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.6);font-size:0.8rem;font-weight:900;padding:0.35rem 0.9rem;border-radius:20px;text-decoration:none;font-family:inherit;">🏠 游戏中心</a>
+  </div>
+  <div class="lang-title">🍽️&nbsp;&nbsp;🥢</div>
+  <div class="lang-options">
+    <div class="lang-card" onclick="chooseLang('en')">
+      <span class="lang-flag">🇺🇸</span>
+      <div class="lang-name">English</div>
+      <div class="lang-sub">Food Bowl Rush!</div>
+    </div>
+    <div class="lang-card" onclick="chooseLang('zh')">
+      <span class="lang-flag">🇨🇳</span>
+      <div class="lang-name">中文</div>
+      <div class="lang-sub">美食大冲关！</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TITLE ============ -->
+<div id="screen-title" class="screen">
+  <div class="floating-foods" id="floating-foods"></div>
+  <div style="position:relative;z-index:1;text-align:center;display:flex;flex-direction:column;align-items:center;gap:0.8rem">
+    <div class="title-main">🥢 美食大冲关！</div>
+    <div class="title-sub">冲进碗里 · 先到先赢！</div>
+    <button class="btn" onclick="onStartGame()">开始游戏</button>
+    <div class="leaderboard" id="leaderboard"></div>
+    <div class="playlist-section" id="playlist-section" style="display:none">
+      <div class="playlist-heading">📹 最近的游戏</div>
+      <div id="playlist-list"></div>
+    </div>
+    <button class="parental-title-btn" onclick="onParentSetupBtn()">🔒 家长设置</button>
+  </div>
+</div>
+
+<!-- ============ PLAYER COUNT ============ -->
+<div id="screen-count" class="screen">
+  <div class="count-title">几位玩家？</div>
+  <div class="count-options">
+    <div class="count-option" onclick="setCount(2)">
+      <span class="count-num">2</span>
+      <div class="count-label">位玩家</div>
+      <div class="count-mode">1 对 1</div>
+    </div>
+    <div class="count-option" onclick="setCount(4)">
+      <span class="count-num">4</span>
+      <div class="count-label">位玩家</div>
+      <div class="count-mode">2 对 2</div>
+    </div>
+    <div class="count-option" onclick="setCount(6)">
+      <span class="count-num">6</span>
+      <div class="count-label">位玩家</div>
+      <div class="count-mode">3 对 3</div>
+    </div>
+    <div class="count-option" onclick="setVsCPU()">
+      <span class="count-num" style="font-size:2.8rem">🤖</span>
+      <div class="count-label">对战电脑</div>
+      <div class="count-mode">单人挑战</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DIFFICULTY (vs CPU) ============ -->
+<div id="screen-difficulty" class="screen">
+  <div class="count-title">选择电脑难度</div>
+  <div class="count-options">
+    <div class="count-option" onclick="setCpuDifficulty('easy')">
+      <span class="count-num" style="font-size:2.8rem">😊</span>
+      <div class="count-label">简单</div>
+      <div class="count-mode">电脑走得慢</div>
+    </div>
+    <div class="count-option" onclick="setCpuDifficulty('medium')">
+      <span class="count-num" style="font-size:2.8rem">😤</span>
+      <div class="count-label">中等</div>
+      <div class="count-mode">电脑走得稳</div>
+    </div>
+    <div class="count-option" onclick="setCpuDifficulty('hard')">
+      <span class="count-num" style="font-size:2.8rem">🔥</span>
+      <div class="count-label">困难</div>
+      <div class="count-mode">电脑势不可挡！</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TRACK SELECT ============ -->
+<div id="screen-track" class="screen">
+  <div class="select-header">
+    <div class="select-player-title" style="color:#ffd700">选择赛道！</div>
+    <div class="select-instruction">选一条赛道开始比赛</div>
+  </div>
+  <div class="track-grid" id="track-grid"></div>
+</div>
+
+<!-- ============ PROFILE SELECT ============ -->
+<div id="screen-profile" class="screen">
+  <div class="select-header">
+    <div class="select-player-title" id="profile-title">玩家 1，你是谁？</div>
+    <div class="select-instruction">点击你的名字认领位置！</div>
+    <div class="selection-dots" id="profile-dots"></div>
+  </div>
+  <div class="profile-grid" id="profile-grid"></div>
+</div>
+
+<!-- ============ FOOD SELECT ============ -->
+<div id="screen-food-select" class="screen">
+  <div class="select-header">
+    <div class="select-player-title" id="select-title">玩家 1，选择你的食物！</div>
+    <div class="select-instruction">点击任意食物选择你的战士</div>
+    <div class="selection-dots" id="sel-dots"></div>
+  </div>
+  <div class="food-grid" id="food-grid"></div>
+</div>
+
+<!-- ============ RECORD CONSENT ============ -->
+<div id="screen-record-consent" class="screen">
+  <div class="rec-consent-title">🎬 要录制这局游戏吗？</div>
+  <div class="rec-consent-sub">录下游戏画面和你们的反应，保存到首页的视频列表里</div>
+  <div class="rec-consent-options">
+    <div class="rec-consent-card rec-yes" onclick="chooseRecord(true)">
+      <span class="rec-consent-icon">📹</span>
+      <span class="rec-consent-label">📹 录制！</span>
+      <span class="rec-consent-note">需要你选择分享当前标签页</span>
+    </div>
+    <div class="rec-consent-card" onclick="chooseRecord(false)">
+      <span class="rec-consent-icon">▶️</span>
+      <span class="rec-consent-label">▶️ 直接开始</span>
+      <span class="rec-consent-note">不保存视频</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PARENTAL CONTROLS SETUP ============ -->
+<div id="screen-parental" class="screen">
+  <div class="parental-title">⏱️ 设置游戏时间限制</div>
+  <div class="parental-sub">可以限制每次游戏的局数。达到限制后，孩子需要家长解锁才能继续游玩。</div>
+  <div class="count-options" style="flex-wrap:wrap;justify-content:center">
+    <div class="count-option" onclick="setParental(0)">
+      <span class="count-num" style="font-size:2.5rem">∞</span>
+      <div class="count-label">无限制</div>
+      <div class="count-mode">无限游戏</div>
+    </div>
+    <div class="count-option" onclick="setParental(1)">
+      <span class="count-num">1</span>
+      <div class="count-label">局</div>
+      <div class="count-mode">快速游戏</div>
+    </div>
+    <div class="count-option" onclick="setParental(2)">
+      <span class="count-num">2</span>
+      <div class="count-label">局</div>
+      <div class="count-mode">短暂游戏</div>
+    </div>
+    <div class="count-option" onclick="setParental(3)">
+      <span class="count-num">3</span>
+      <div class="count-label">局</div>
+      <div class="count-mode">轻松游戏</div>
+    </div>
+    <div class="count-option" onclick="setParental(4)">
+      <span class="count-num">4</span>
+      <div class="count-label">局</div>
+      <div class="count-mode">标准游戏</div>
+    </div>
+    <div class="count-option" onclick="setParental(5)">
+      <span class="count-num">5</span>
+      <div class="count-label">局</div>
+      <div class="count-mode">长时游戏</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SESSION LOCKED ============ -->
+<div id="screen-locked" class="screen">
+  <span class="locked-icon">🔒</span>
+  <div class="locked-title">游戏时间到！</div>
+  <div class="locked-sub">玩得很棒！今天的游戏时间已用完，请让爸爸妈妈解锁更多时间！</div>
+  <div class="locked-count" id="locked-count-msg"></div>
+  <button class="btn" onclick="showParentUnlock('unlock')" style="background:linear-gradient(135deg,#533483,#7952b3);box-shadow:0 6px 20px rgba(83,52,131,0.4);margin-top:0.5rem">
+    👨‍👩‍👧 家长解锁
+  </button>
+</div>
+
+<!-- ============ PARENT QUIZ UNLOCK ============ -->
+<div id="screen-parent-unlock" class="screen">
+  <div class="quiz-header">
+    <div class="quiz-title">🧠 家长验证</div>
+    <div class="quiz-sub">答对全部 3 道题即可解锁</div>
+  </div>
+  <div id="quiz-questions" style="width:100%;max-width:580px;display:flex;flex-direction:column;gap:0.9rem;align-items:center"></div>
+  <button class="btn btn-green" id="quiz-submit" onclick="checkQuiz()" style="display:none;margin-top:0.2rem">✓ 提交答案</button>
+  <div class="quiz-result" id="quiz-result"></div>
+</div>
+
+<!-- ============ GAME ============ -->
+<div id="screen-game" class="screen">
+  <div class="game-header">
+    <div class="game-title">🏆 冲进碗里！🥣</div>
+    <div class="controls-bar" id="controls-bar"></div>
+  </div>
+  <div class="lanes-container" id="lanes-container"></div>
+</div>
+
+<!-- ============ COUNTDOWN ============ -->
+<!-- ============ VIDEO PLAYER MODAL ============ -->
+<div id="video-modal" onclick="if(event.target===this)closeVideoModal()">
+  <video id="video-modal-player" controls></video>
+  <button class="vm-close" onclick="closeVideoModal()">✕ 关闭</button>
+</div>
+
+<!-- ============ COMPOSITION CANVAS ============ -->
+<canvas id="compose-canvas" style="display:none;position:absolute;pointer-events:none"></canvas>
+<video id="screen-cap-vid" style="display:none" autoplay muted playsinline></video>
+
+<!-- ============ 添加玩家弹窗 ============ -->
+<div id="profile-modal-overlay" onclick="if(event.target===this)hideAddProfileModal()">
+  <div id="profile-modal">
+    <div class="pm-title" id="pm-title">➕ 添加玩家</div>
+    <div>
+      <div class="pm-label">名字</div>
+      <input id="pm-name-input" type="text" placeholder="输入名字..." maxlength="14" />
+    </div>
+    <div>
+      <div class="pm-label">选择头像</div>
+      <div class="pm-emoji-grid" id="pm-emoji-grid"></div>
+    </div>
+    <div>
+      <div class="pm-label">选择颜色</div>
+      <div class="pm-color-grid" id="pm-color-grid"></div>
+    </div>
+    <div class="pm-buttons">
+      <button class="pm-btn-cancel" onclick="hideAddProfileModal()">取消</button>
+      <button class="pm-btn-save" onclick="confirmAddProfile()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="countdown-overlay">
+  <div id="cd-text" class="cd-number">5</div>
+  <div id="cd-sub" class="cd-subtitle" style="display:none">游戏开始！！！</div>
+</div>
+
+<!-- ============ WINNER ============ -->
+<div id="screen-winner" class="screen">
+  <div class="confetti-layer" id="confetti-layer"></div>
+  <div class="winner-label">胜利者！</div>
+  <div class="winner-food-big" id="w-emoji">🏆</div>
+  <div class="winner-food-name" id="w-name">Food Name</div>
+  <div class="winner-team-name" id="w-team">Team X Wins!</div>
+  <div id="winner-buttons" style="display:flex;gap:0.8rem;margin-top:0.5rem;flex-wrap:wrap;justify-content:center">
+    <button class="btn btn-green" onclick="goTitle()">再来一局！</button>
+    <button class="btn" onclick="watchReplay()" style="background:linear-gradient(135deg,#533483,#7952b3);box-shadow:0 6px 20px rgba(83,52,131,0.4)">🎬 观看回放</button>
+  </div>
+</div>
+
+<!-- ============ CAMERA DENIED TOAST ============ -->
+<div id="cam-denied-toast">
+  <span>📷</span>
+  <span id="cam-denied-msg">摄像头被拒绝 — 请在浏览器设置中允许 localhost 使用摄像头</span>
+</div>
+
+<!-- ============ CAMERA PREVIEW ============ -->
+<div id="cam-container">
+  <video id="cam-preview" autoplay muted playsinline></video>
+  <div class="cam-bar">
+    <div class="rec-dot"></div>
+    <span class="rec-label">录制</span>
+    <button class="cam-min-btn" onclick="toggleCamMin()">_</button>
+  </div>
+</div>
+
+<script>
+// =============================================
+// DATA
+// =============================================
+const FOODS = [
+  { id:'shrimp',   emoji:'🦐', name:'虾',   trait:'倒退走',    desc:'有时候会向后倒退！' },
+  { id:'miantiao', emoji:'🍜', name:'面条', trait:'猛嗦加速',  desc:'随机爆发超大加速！' },
+  { id:'rice',     emoji:'🍚', name:'米饭', trait:'稳步前进',  desc:'稳定可靠的跳跃！' },
+  { id:'takeout',  emoji:'🥡', name:'外卖', trait:'神出鬼没',  desc:'跳跃距离难以预测！' },
+  { id:'tangyuan', emoji:'🍡', name:'汤圆', trait:'粘粘卡壳',  desc:'有时会完全粘住！' },
+  { id:'tea',      emoji:'🫖', name:'茶',   trait:'越跑越快',  desc:'每跳都越来越快！' },
+  { id:'mooncake', emoji:'🥮', name:'月饼', trait:'糖分爆炸',  desc:'每3跳有一次超大跳！' },
+  { id:'bento',    emoji:'🍱', name:'便当', trait:'能量满满',  desc:'又大又有力的跳跃！' },
+  { id:'bokchoy',  emoji:'🥬', name:'青菜', trait:'超级弹射',  desc:'偶尔来一次超远弹射！' },
+  { id:'jiaozi',   emoji:'🥟', name:'饺子', trait:'蒸气双跳',  desc:'偶尔能跳两次！' },
+  { id:'hotpot',   emoji:'🫕', name:'火锅', trait:'蒸汽冻结',  desc:'有时会被蒸汽冻住！' },
+  { id:'skewer',   emoji:'🍢', name:'串串', trait:'最疯狂距离', desc:'所有食物中最狂野的！' },
+];
+
+const PROFILES_DEFAULT = [
+  { id:'celine',  name:'Celine',  emoji:'👧', color:'#f783ac' },
+  { id:'eileen',  name:'Eileen',  emoji:'👩', color:'#74c0fc' },
+  { id:'tao',     name:'Tao',     emoji:'👨', color:'#51cf66' },
+  { id:'kunyan',  name:'Kunyan',  emoji:'🧑', color:'#ffd43b' },
+  { id:'yeye',    name:'爷爷',    emoji:'👴', color:'#ff922b' },
+  { id:'nainai',  name:'奶奶',    emoji:'👵', color:'#cc5de8' },
+];
+function loadCustomProfiles() {
+  try { return JSON.parse(localStorage.getItem('foodBowlRush_customProfiles') || '[]'); } catch { return []; }
+}
+function saveCustomProfiles(arr) {
+  localStorage.setItem('foodBowlRush_customProfiles', JSON.stringify(arr));
+}
+function loadProfileOverrides() {
+  try { return JSON.parse(localStorage.getItem('foodBowlRush_profileOverrides') || '{}'); } catch { return {}; }
+}
+function saveProfileOverrides(obj) {
+  localStorage.setItem('foodBowlRush_profileOverrides', JSON.stringify(obj));
+}
+function buildProfileList() {
+  const overrides = loadProfileOverrides();
+  const defaults = PROFILES_DEFAULT.map(p => overrides[p.id] ? { ...p, ...overrides[p.id] } : p);
+  return [...defaults, ...loadCustomProfiles()];
+}
+let PROFILES = buildProfileList();
+
+const TRACKS = [
+  {
+    id: 'highway',
+    name: '长城大道',
+    emoji: '🏯',
+    desc: '经典直线冲刺',
+    color: '#457b9d',
+    height: 60,
+    pathD: 'M 30,30 L 970,30',
+  },
+  {
+    id: 'wave',
+    name: '东海浪涛',
+    emoji: '🌊',
+    desc: '随浪飞奔向终点',
+    color: '#0096c7',
+    height: 90,
+    pathD: 'M 30,45 C 130,5 230,85 380,45 C 530,5 630,85 780,45 C 880,5 950,60 970,45',
+  },
+  {
+    id: 'mountain',
+    name: '泰山险道',
+    emoji: '⛰️',
+    desc: '翻山越岭夺碗',
+    color: '#6d6875',
+    height: 90,
+    pathD: 'M 30,78 C 200,78 350,5 500,5 C 650,5 800,78 970,78',
+  },
+  {
+    id: 'snake',
+    name: '龙形弯道',
+    emoji: '🐉',
+    desc: 'S形蜿蜒到终点',
+    color: '#52b788',
+    height: 90,
+    pathD: 'M 30,15 C 230,15 290,75 500,75 C 710,75 770,15 970,15',
+  },
+  {
+    id: 'zigzag',
+    name: '折返小径',
+    emoji: '⚡',
+    desc: '急转弯让你措手不及',
+    color: '#ffd700',
+    height: 90,
+    pathD: 'M 30,45 L 195,8 L 380,82 L 565,8 L 750,82 L 935,8 L 970,45',
+  },
+  {
+    id: 'rollercoaster',
+    name: '功夫云霄',
+    emoji: '🥋',
+    desc: '最刺激的挑战！',
+    color: '#e63946',
+    height: 90,
+    pathD: 'M 30,78 C 80,78 110,8 180,8 C 250,8 280,78 350,78 C 410,78 450,22 520,22 C 590,22 625,78 695,78 C 760,78 820,5 910,5 C 950,5 965,28 970,35',
+  },
+  {
+    id: 'circle',
+    name: '圆满争碗',
+    emoji: '⭕',
+    desc: '两队各走半圆！',
+    color: '#f4a261',
+    height: 100,
+    layout: 'circle',
+    topPathD:    'M 30,50 A 470,48 0 0,0 970,50',
+    bottomPathD: 'M 30,50 A 470,48 0 0,1 970,50',
+    pathD: 'M 30,50 A 470,48 0 0,0 970,50 A 470,48 0 0,1 30,50',
+  },
+];
+
+// =============================================
+// PARENTAL CONTROLS DATA
+// =============================================
+const PARENT_QUESTIONS = [
+  { q: "What year did World War II end?",              opts: ["1940","1942","1945","1950"],                                                                      a: 2 },
+  { q: "What is the capital of Canada?",               opts: ["Toronto","Montreal","Vancouver","Ottawa"],                                                        a: 3 },
+  { q: "What year did humans first land on the Moon?", opts: ["1959","1963","1969","1975"],                                                                      a: 2 },
+  { q: "What is 23 × 17?",                             opts: ["371","381","391","401"],                                                                          a: 2 },
+  { q: "What is the capital of Australia?",            opts: ["Sydney","Melbourne","Perth","Canberra"],                                                          a: 3 },
+  { q: "What is the chemical symbol for Gold?",        opts: ["Gd","Go","Ag","Au"],                                                                             a: 3 },
+  { q: "What year did the Berlin Wall fall?",          opts: ["1975","1979","1989","1993"],                                                                      a: 2 },
+  { q: "What is the square root of 169?",              opts: ["11","12","13","14"],                                                                             a: 2 },
+  { q: "What is the capital of Brazil?",               opts: ["São Paulo","Rio de Janeiro","Brasília","Buenos Aires"],                                           a: 2 },
+  { q: "What year was the original iPhone released?",  opts: ["2004","2005","2007","2009"],                                                                      a: 2 },
+  { q: "How many sides does a dodecagon have?",        opts: ["8","10","12","14"],                                                                              a: 2 },
+  { q: "Largest country in the world by area?",        opts: ["China","USA","Canada","Russia"],                                                                  a: 3 },
+  { q: "What does DNA stand for?",                     opts: ["Digital Network Array","Deoxyribonucleic Acid","Direct Nucleus Acid","Dynamic Node Array"],       a: 1 },
+  { q: "What is 19 × 19?",                             opts: ["341","351","361","371"],                                                                          a: 2 },
+  { q: "Atomic number of Carbon on the periodic table?", opts: ["4","6","8","12"],                                                                              a: 1 },
+];
+
+// ── SCORES ──
+const SCORE_KEY = 'foodBowlRush_scores';
+const API = 'http://localhost:8765/api/scores';
+let _scores = {};
+let _serverOnline = false;
+
+async function initScores() {
+  try { _scores = JSON.parse(localStorage.getItem(SCORE_KEY) || '{}'); } catch {}
+  try {
+    const r = await fetch(API, { signal: AbortSignal.timeout(600) });
+    if (r.ok) {
+      _scores = await r.json();
+      localStorage.setItem(SCORE_KEY, JSON.stringify(_scores));
+      _serverOnline = true;
+    }
+  } catch {}
+  renderLeaderboard();
+}
+
+function loadScores() { return _scores; }
+
+function saveScores(s) {
+  _scores = s;
+  localStorage.setItem(SCORE_KEY, JSON.stringify(s));
+  if (_serverOnline) {
+    fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(s) })
+      .catch(() => { _serverOnline = false; });
+  }
+}
+
+function addWin(profileId) {
+  const s = { ...loadScores() };
+  s[profileId] = (s[profileId] || 0) + 1;
+  saveScores(s);
+}
+
+function resetScores() {
+  if (!confirm('重置所有分数？此操作不可撤销！')) return;
+  saveScores({});
+  if (_serverOnline) {
+    fetch(API, { method:'DELETE' }).catch(() => {});
+  }
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  const scores = loadScores();
+  const el = document.getElementById('leaderboard');
+  if (!el) return;
+  const rows = PROFILES
+    .map(p => ({ ...p, wins: scores[p.id] || 0 }))
+    .sort((a, b) => b.wins - a.wins);
+  const medals = ['🥇','🥈','🥉',...Array(Math.max(0, rows.length - 3)).fill('🏅')];
+  const statusDot = _serverOnline
+    ? `<span title="分数保存至文件" style="color:#51cf66;font-size:0.65rem">● 文件</span>`
+    : `<span title="运行 start-game.command 可保存至文件" style="color:#666;font-size:0.65rem">● 本地</span>`;
+  el.innerHTML =
+    `<div class="lb-title">🏆 名人堂 ${statusDot}</div>` +
+    rows.map((r, i) =>
+      `<div class="lb-row">
+        <span class="lb-rank">${medals[i]}</span>
+        <span class="lb-avatar">${r.emoji}</span>
+        <span class="lb-pname" style="color:${r.color}">${r.name}</span>
+        <span class="lb-wins">${r.wins} <small>胜</small></span>
+      </div>`
+    ).join('') +
+    `<div style="text-align:center;margin-top:0.5rem">
+      <button onclick="resetScores()" style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#666;font-size:0.7rem;padding:3px 12px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.color='#ff6b6b';this.style.borderColor='#ff6b6b'" onmouseout="this.style.color='#666';this.style.borderColor='rgba(255,255,255,0.15)'">🗑️ 重置分数</button>
+    </div>`;
+}
+
+const KEYS = { 2:['a','l'], 4:['a','s','k','l'], 6:['a','s','d','k','l',';'] };
+const TEAM_LETTERS = ['A','B','C'];
+const TEAM_COLORS  = { A:'#e63946', B:'#74c0fc', C:'#51cf66' };
+const WIN_POS  = 92;
+const JUMP_COOLDOWN = 380;
+const CPU_DIFFICULTY = {
+  easy:   [850, 1500],
+  medium: [480, 880],
+  hard:   [280, 550],
+};
+let cpuDifficulty = 'medium';
+let cpuAiTimers = [];
+
+// =============================================
+// STATE
+// =============================================
+let gs = {
+  players: [],
+  selecting: 0,
+  taken: new Set(),
+  profilesTaken: new Set(),
+  over: false,
+  track: null,
+  willRecord: false,
+};
+
+let replayLog = [];
+let replayStartTime = null;
+let replayTimers = [];
+let replayWinner = null;
+
+// ── RECORDING STATE ──
+let _compRec = null;
+let _compChunks = [];
+let _compRAF = null;
+let _screenStream = null;
+let _camStream = null;
+// legacy refs (unused but kept so old winner-screen refs don't break)
+let _mediaRecorder = null;
+let _recordedChunks = [];
+let _recordingStream = null;
+
+let parentalLimit = 0;
+let sessionGames = 0;
+let parentalConfigured = false;
+let quizSuccessAction = 'unlock';
+let quizCurrentQs = [];
+let quizAnswers = [];
+
+// =============================================
+// SCREEN HELPER
+// =============================================
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+
+// =============================================
+// LANGUAGE SELECT
+// =============================================
+function chooseLang(lang) {
+  if (lang === 'en') {
+    window.location.href = 'index.html';
+  } else {
+    renderLeaderboard();
+    showScreen('title');
+  }
+}
+
+// =============================================
+// PARENTAL CONTROLS
+// =============================================
+function onStartGame() {
+  if (parentalLimit > 0 && sessionGames >= parentalLimit) { showLockedScreen(); return; }
+  if (!parentalConfigured) { showScreen('parental'); } else { showScreen('count'); }
+}
+
+function onParentSetupBtn() {
+  if (parentalLimit > 0) { quizSuccessAction = 'settings'; showParentUnlock('settings'); }
+  else { showScreen('parental'); }
+}
+
+function setParental(limit) {
+  parentalLimit = limit;
+  sessionGames = 0;
+  parentalConfigured = true;
+  showScreen('count');
+}
+
+function showLockedScreen() {
+  const el = document.getElementById('locked-count-msg');
+  if (el) el.textContent = `本次游戏共玩了 ${sessionGames} 局。`;
+  showScreen('locked');
+}
+
+function showParentUnlock(action) {
+  quizSuccessAction = action || 'unlock';
+  quizCurrentQs = [...PARENT_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 3);
+  quizAnswers = [-1, -1, -1];
+  buildQuiz();
+  showScreen('parent-unlock');
+}
+
+function buildQuiz() {
+  const container = document.getElementById('quiz-questions');
+  container.innerHTML = '';
+  const submitBtn = document.getElementById('quiz-submit');
+  const resultEl  = document.getElementById('quiz-result');
+  submitBtn.style.display = 'none';
+  submitBtn.textContent = '✓ 提交答案';
+  submitBtn.onclick = checkQuiz;
+  resultEl.textContent = '';
+  quizCurrentQs.forEach((q, qi) => {
+    const div = document.createElement('div');
+    div.className = 'quiz-question';
+    div.innerHTML =
+      `<div class="quiz-q-text">${qi + 1}. ${q.q}</div>` +
+      `<div class="quiz-opts">` +
+        q.opts.map((opt, oi) =>
+          `<button class="quiz-opt" id="qopt-${qi}-${oi}" onclick="selectQuizAnswer(${qi},${oi})">${opt}</button>`
+        ).join('') +
+      `</div>`;
+    container.appendChild(div);
+  });
+}
+
+function selectQuizAnswer(qi, oi) {
+  quizAnswers[qi] = oi;
+  quizCurrentQs[qi].opts.forEach((_, oIdx) => {
+    const btn = document.getElementById(`qopt-${qi}-${oIdx}`);
+    if (btn) btn.className = 'quiz-opt' + (oIdx === oi ? ' selected' : '');
+  });
+  if (quizAnswers.every(a => a >= 0)) document.getElementById('quiz-submit').style.display = 'block';
+}
+
+function checkQuiz() {
+  let allCorrect = true;
+  quizCurrentQs.forEach((q, qi) => {
+    const correct = quizAnswers[qi] === q.a;
+    if (!correct) allCorrect = false;
+    q.opts.forEach((_, oi) => {
+      const btn = document.getElementById(`qopt-${qi}-${oi}`);
+      if (!btn) return;
+      btn.disabled = true;
+      if (oi === q.a) btn.classList.add('correct');
+      else if (oi === quizAnswers[qi]) btn.classList.add('wrong');
+    });
+  });
+  const resultEl  = document.getElementById('quiz-result');
+  const submitBtn = document.getElementById('quiz-submit');
+  if (allCorrect) {
+    resultEl.innerHTML = '<span style="color:#51cf66">🎉 全部正确！正在解锁...</span>';
+    submitBtn.style.display = 'none';
+    setTimeout(() => {
+      sessionGames = 0;
+      if (quizSuccessAction === 'settings') { showScreen('parental'); }
+      else { renderLeaderboard(); showScreen('title'); }
+    }, 1400);
+  } else {
+    resultEl.innerHTML = '<span style="color:#ff6b6b">❌ 有错误答案，请再试！</span>';
+    submitBtn.textContent = '↺ 换题';
+    submitBtn.style.display = 'block';
+    submitBtn.onclick = () => showParentUnlock(quizSuccessAction);
+  }
+}
+
+// =============================================
+// TITLE
+// =============================================
+initScores();
+initRecDB().then(() => renderPlaylist());
+(function initTitle() {
+  const wrap = document.getElementById('floating-foods');
+  const emojis = ['🦐','🍜','🥮','🫕','🍡','🥡','🫖','🍱','🥬','🥟','🍢','🍚'];
+  emojis.forEach(e => {
+    const d = document.createElement('div');
+    d.className = 'floating-food';
+    d.textContent = e;
+    d.style.left = Math.random() * 100 + '%';
+    d.style.fontSize = (1.5 + Math.random() * 2.5) + 'rem';
+    d.style.animationDuration = (7 + Math.random() * 8) + 's';
+    d.style.animationDelay = (Math.random() * 6) + 's';
+    wrap.appendChild(d);
+  });
+})();
+
+// =============================================
+// PLAYER COUNT
+// =============================================
+function setCount(n) {
+  const keys = KEYS[n];
+  const teamSize = n / 2;
+  gs.players = [];
+  gs.taken = new Set();
+  gs.profilesTaken = new Set();
+  gs.selecting = 0;
+  gs.track = null;
+
+  for (let i = 0; i < n; i++) {
+    const teamIdx = Math.floor(i / teamSize);
+    gs.players.push({
+      id: i + 1,
+      team: TEAM_LETTERS[teamIdx],
+      key: keys[i],
+      keyDisplay: keys[i] === ';' ? ';' : keys[i].toUpperCase(),
+      profile: null,
+      food: null,
+      pos: 0,
+      jumps: 0,
+      status: 'ready',
+      lastJump: 0,
+    });
+  }
+
+  showTrackSelect();
+}
+
+// =============================================
+// VS CPU SETUP
+// =============================================
+function setVsCPU() {
+  showScreen('difficulty');
+}
+
+function setCpuDifficulty(diff) {
+  cpuDifficulty = diff;
+  gs.players = [];
+  gs.taken = new Set();
+  gs.profilesTaken = new Set();
+  gs.selecting = 0;
+  gs.track = null;
+
+  gs.players.push({
+    id: 1, team: 'A', key: 'a', keyDisplay: 'A',
+    profile: null, food: null, pos: 0, jumps: 0, status: 'ready', lastJump: 0,
+  });
+  gs.players.push({
+    id: 2, team: 'B', key: null, keyDisplay: '🤖',
+    profile: { id: 'cpu', name: '电脑', emoji: '🤖', color: '#e76f51' },
+    food: null, pos: 0, jumps: 0, status: 'ready', lastJump: 0,
+    isBot: true,
+  });
+
+  showTrackSelect();
+}
+
+function startCpuAI() {
+  stopCpuAI();
+  gs.players.filter(p => p.isBot).forEach(bot => doCpuJumpLoop(bot));
+}
+
+function doCpuJumpLoop(bot) {
+  if (gs.over || bot.status !== 'ready') return;
+  const [minMs, maxMs] = CPU_DIFFICULTY[cpuDifficulty];
+  const delay = minMs + Math.random() * (maxMs - minMs);
+  const tid = setTimeout(() => {
+    cpuAiTimers = cpuAiTimers.filter(t => t !== tid);
+    if (gs.over || bot.status !== 'ready') return;
+    bot.lastJump = Date.now();
+    bot._msg = null;
+    bot._frozen = false;
+    const amount = calcJump(bot);
+    bot.jumps++;
+    if (Array.isArray(amount)) {
+      playSoundForJump(bot, amount[0]);
+      applyJump(bot, amount[0], () => {
+        if (bot.status === 'ready' && !gs.over) {
+          const t2 = setTimeout(() => {
+            cpuAiTimers = cpuAiTimers.filter(t => t !== t2);
+            playBoing(1.3, 0.35);
+            applyJump(bot, amount[1], () => doCpuJumpLoop(bot));
+          }, 320);
+          cpuAiTimers.push(t2);
+        }
+      });
+    } else {
+      playSoundForJump(bot, amount);
+      applyJump(bot, amount, () => doCpuJumpLoop(bot));
+    }
+  }, delay);
+  cpuAiTimers.push(tid);
+}
+
+function stopCpuAI() {
+  cpuAiTimers.forEach(t => clearTimeout(t));
+  cpuAiTimers = [];
+}
+
+// =============================================
+// TRACK SELECTION
+// =============================================
+function showTrackSelect() {
+  buildTrackGrid();
+  showScreen('track');
+}
+
+function buildTrackGrid() {
+  const grid = document.getElementById('track-grid');
+  grid.innerHTML = '';
+  TRACKS.forEach(track => {
+    const card = document.createElement('div');
+    card.className = 'track-card';
+    card.style.borderColor = track.color + '66';
+    const previewSVG = `<svg class="track-card-preview" viewBox="0 0 1000 ${track.height}" preserveAspectRatio="xMidYMid meet">
+      <path d="${track.pathD}" stroke="${track.color}" stroke-width="4" fill="none" opacity="0.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${track.pathD}" stroke="${track.color}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="30" cy="${track.height/2}" r="8" fill="${track.color}" opacity="0.7"/>
+      <text x="965" y="${track.height/2 + 6}" font-size="28" text-anchor="middle" dominant-baseline="middle">🥣</text>
+    </svg>`;
+    card.innerHTML =
+      previewSVG +
+      `<div class="track-card-name">${track.emoji} ${track.name}</div>` +
+      `<div class="track-card-desc">${track.desc}</div>`;
+    card.onclick = () => pickTrack(track);
+    grid.appendChild(card);
+  });
+}
+
+function pickTrack(track) {
+  gs.track = track;
+  buildProfileGrid();
+  buildProfileDots();
+  updateProfileHeader();
+  showScreen('profile');
+}
+
+// =============================================
+// PROFILE SELECTION
+// =============================================
+function buildProfileGrid() {
+  const scores = loadScores();
+  const grid = document.getElementById('profile-grid');
+  grid.innerHTML = '';
+  PROFILES.forEach(prof => {
+    const taken = gs.profilesTaken.has(prof.id);
+    const wins = scores[prof.id] || 0;
+    const card = document.createElement('div');
+    card.className = 'profile-card' + (taken ? ' taken' : '');
+    card.style.borderColor = taken ? 'rgba(255,255,255,0.1)' : prof.color + '66';
+    card.innerHTML =
+      `<span class="profile-avatar">${prof.emoji}</span>` +
+      `<div class="profile-pname" style="color:${prof.color}">${prof.name}</div>` +
+      `<div class="profile-wins-badge">${wins} 胜</div>` +
+      (prof.custom ? `<button class="profile-edit-btn" onclick="event.stopPropagation();showEditProfileModal('${prof.id}')">✎</button>` : '') +
+      (prof.custom ? `<button class="profile-delete-btn" onclick="event.stopPropagation();deleteCustomProfile('${prof.id}')">✕</button>` : '');
+    if (!taken) card.onclick = () => pickProfile(prof);
+    grid.appendChild(card);
+  });
+  const addCard = document.createElement('div');
+  addCard.className = 'profile-add-card';
+  addCard.innerHTML = `<span style="font-size:1.8rem">➕</span><span>添加玩家</span>`;
+  addCard.onclick = showAddProfileModal;
+  grid.appendChild(addCard);
+}
+
+function buildProfileDots() {
+  const wrap = document.getElementById('profile-dots');
+  wrap.innerHTML = '';
+  gs.players.forEach((p, i) => {
+    if (p.isBot) return;
+    const d = document.createElement('div');
+    d.className = 'sel-dot' +
+      (p.profile ? ' done' : '') +
+      (i === gs.selecting && !p.profile ? ' current' : '');
+    wrap.appendChild(d);
+  });
+}
+
+function updateProfileHeader() {
+  const p = gs.players[gs.selecting];
+  const el = document.getElementById('profile-title');
+  el.style.color = TEAM_COLORS[p.team];
+  const teamLabel = gs.players.length > 2 ? `（${p.team}队）` : '';
+  el.textContent = `玩家 ${p.id}${teamLabel}，你是谁？`;
+}
+
+function pickProfile(prof) {
+  const p = gs.players[gs.selecting];
+  p.profile = prof;
+  gs.profilesTaken.add(prof.id);
+  gs.selecting++;
+  while (gs.selecting < gs.players.length && gs.players[gs.selecting].isBot) gs.selecting++;
+
+  if (gs.selecting >= gs.players.length) {
+    gs.selecting = 0;
+    while (gs.selecting < gs.players.length && gs.players[gs.selecting].isBot) gs.selecting++;
+    buildFoodGrid();
+    buildSelDots();
+    updateSelectHeader();
+    showScreen('food-select');
+  } else {
+    buildProfileGrid();
+    buildProfileDots();
+    updateProfileHeader();
+  }
+}
+
+// =============================================
+// FOOD SELECTION
+// =============================================
+function buildFoodGrid() {
+  const grid = document.getElementById('food-grid');
+  grid.innerHTML = '';
+  FOODS.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'food-card' + (gs.taken.has(f.id) ? ' taken' : '');
+    card.innerHTML =
+      `<span class="food-card-emoji">${f.emoji}</span>` +
+      `<div class="food-card-name">${f.name}</div>` +
+      `<div class="food-card-trait">✨ ${f.trait}</div>` +
+      `<div class="food-card-desc">${f.desc}</div>`;
+    if (!gs.taken.has(f.id)) card.onclick = () => pickFood(f);
+    grid.appendChild(card);
+  });
+}
+
+function buildSelDots() {
+  const wrap = document.getElementById('sel-dots');
+  wrap.innerHTML = '';
+  gs.players.forEach((p, i) => {
+    if (p.isBot) return;
+    const d = document.createElement('div');
+    d.className = 'sel-dot' +
+      (p.food ? ' done' : '') +
+      (i === gs.selecting && !p.food ? ' current' : '');
+    wrap.appendChild(d);
+  });
+}
+
+function updateSelectHeader() {
+  const p = gs.players[gs.selecting];
+  const el = document.getElementById('select-title');
+  el.style.color = p.profile ? p.profile.color : TEAM_COLORS[p.team];
+  const name = p.profile ? `${p.profile.emoji} ${p.profile.name}` : `玩家 ${p.id}`;
+  const teamLabel = gs.players.length > 2 ? `（${p.team}队）` : '';
+  el.textContent = `${name}${teamLabel}，选择你的食物！`;
+}
+
+function pickFood(food) {
+  const p = gs.players[gs.selecting];
+  p.food = food;
+  gs.taken.add(food.id);
+  gs.selecting++;
+  while (gs.selecting < gs.players.length && gs.players[gs.selecting].isBot) {
+    const bot = gs.players[gs.selecting];
+    const available = FOODS.filter(f => !gs.taken.has(f.id));
+    bot.food = available[Math.floor(Math.random() * available.length)];
+    gs.taken.add(bot.food.id);
+    gs.selecting++;
+  }
+
+  if (gs.selecting >= gs.players.length) {
+    showRecordConsent();
+  } else {
+    buildFoodGrid();
+    buildSelDots();
+    updateSelectHeader();
+  }
+}
+
+// =============================================
+// GAME INIT
+// =============================================
+function startGame() {
+  gs.over = false;
+  replayLog = [];
+  replayStartTime = null;
+  replayWinner = null;
+  gs.players.forEach(p => { p.pos = 0; p.jumps = 0; p.status = 'ready'; p.lastJump = 0; });
+  buildGameScreen();
+  showScreen('game');
+  startCountdown();
+}
+
+function startCountdown() {
+  const overlay = document.getElementById('countdown-overlay');
+  const cdText  = document.getElementById('cd-text');
+  const cdSub   = document.getElementById('cd-sub');
+
+  overlay.classList.remove('fade-out');
+  overlay.classList.add('active');
+  cdSub.style.display = 'none';
+  cdText.className = 'cd-number';
+
+  let count = 5;
+
+  function tick() {
+    cdText.className = '';
+    void cdText.offsetWidth;
+    cdText.className = 'cd-number';
+    cdText.textContent = count;
+    playCountdownBeep(count);
+    count--;
+    if (count > 0) {
+      setTimeout(tick, 950);
+    } else {
+      setTimeout(showGo, 950);
+    }
+  }
+
+  function showGo() {
+    cdText.className = '';
+    void cdText.offsetWidth;
+    cdText.className = 'cd-go';
+    cdText.textContent = '冲啊！！！';
+    cdSub.style.display = 'block';
+    cdSub.style.animation = 'none';
+    void cdSub.offsetWidth;
+    cdSub.style.animation = '';
+    playGoFanfare();
+    setTimeout(() => {
+      overlay.classList.add('fade-out');
+      setTimeout(() => {
+        overlay.classList.remove('active', 'fade-out');
+        document.addEventListener('keydown', onKey);
+        startCpuAI();
+      }, 280);
+    }, 900);
+  }
+
+  tick();
+}
+
+function buildGameScreen() {
+  const bar = document.getElementById('controls-bar');
+  bar.innerHTML = gs.players.map(p => {
+    const who = p.profile ? `${p.profile.emoji} ${p.profile.name}` : `P${p.id}`;
+    if (p.isBot) return `<div class="ctrl-chip">${p.food.emoji} ${who}: <b style="color:#e76f51">自动</b></div>`;
+    return `<div class="ctrl-chip">${p.food.emoji} ${who}: <b>${p.keyDisplay}</b></div>`;
+  }).join('');
+
+  const container = document.getElementById('lanes-container');
+  container.innerHTML = '';
+  const teamCls = { A:'team-a', B:'team-b', C:'team-c' };
+
+  gs.players.forEach(p => {
+    const pPathD = gs.track.layout === 'circle'
+      ? (p.team === 'A' ? gs.track.topPathD : gs.track.bottomPathD)
+      : gs.track.pathD;
+    const lane = document.createElement('div');
+    lane.className = `player-lane ${teamCls[p.team]}`;
+    lane.id = `lane-${p.id}`;
+    const who = p.profile ? `${p.profile.emoji} ${p.profile.name}` : `P${p.id}`;
+    lane.innerHTML =
+      `<div class="lane-top">` +
+        `<span class="lane-emoji">${p.food.emoji}</span>` +
+        `<span class="lane-name">${who} · ${p.food.name}</span>` +
+        (p.isBot ? `<span class="lane-key" style="color:#e76f51;border-color:rgba(231,111,81,0.4)">🤖</span>` : `<span class="lane-key">${p.keyDisplay}</span>`) +
+        `<span class="lane-msg" id="msg-${p.id}"></span>` +
+      `</div>` +
+      `<div class="track-wrap" id="track-${p.id}" style="height:${gs.track.height}px">` +
+        `<svg class="track-svg" id="track-svg-${p.id}" viewBox="0 0 1000 ${gs.track.height}" preserveAspectRatio="none">` +
+          `<path d="${pPathD}" stroke="${gs.track.color}" stroke-width="10" fill="none" opacity="0.18" stroke-linecap="round" stroke-linejoin="round"/>` +
+          `<path d="${pPathD}" stroke="rgba(255,255,255,0.22)" stroke-width="3" fill="none" stroke-dasharray="14,10" stroke-linecap="round" stroke-linejoin="round"/>` +
+          `<path id="track-path-${p.id}" d="${pPathD}" fill="none" stroke="none"/>` +
+        `</svg>` +
+        `<span class="track-food" id="food-${p.id}">${p.food.emoji}</span>` +
+        `<span class="track-bowl" id="bowl-${p.id}">🥣</span>` +
+      `</div>` +
+      `<div class="prog-wrap"><div class="prog-fill" id="prog-${p.id}"></div></div>`;
+    container.appendChild(lane);
+  });
+
+  requestAnimationFrame(() => {
+    gs.players.forEach(p => initLaneTrack(p));
+  });
+}
+
+// =============================================
+// SVG TRACK HELPERS
+// =============================================
+function setFoodPos(playerId, pos) {
+  const pathEl = document.getElementById('track-path-' + playerId);
+  const foodEl = document.getElementById('food-' + playerId);
+  if (!pathEl || !foodEl) return;
+  const totalLen = pathEl.getTotalLength();
+  const clamped = Math.min(Math.max(pos, 0), 100);
+  const pt = pathEl.getPointAtLength(totalLen * clamped / 100);
+  const vbH = gs.track ? gs.track.height : 60;
+  foodEl.style.left = (pt.x / 1000 * 100) + '%';
+  foodEl.style.top = (pt.y / vbH * 100) + '%';
+}
+
+function initLaneTrack(p) {
+  const pathEl = document.getElementById('track-path-' + p.id);
+  const bowlEl = document.getElementById('bowl-' + p.id);
+  if (!pathEl || !bowlEl) return;
+  const totalLen = pathEl.getTotalLength();
+  const endPt = pathEl.getPointAtLength(totalLen);
+  const vbH = gs.track.height;
+  bowlEl.style.left = (endPt.x / 1000 * 100) + '%';
+  bowlEl.style.top = (endPt.y / vbH * 100) + '%';
+  setFoodPos(p.id, 0);
+}
+
+// =============================================
+// JUMP CALCULATION
+// =============================================
+function calcJump(p) {
+  const rnd = (lo, hi) => lo + Math.random() * (hi - lo);
+
+  switch (p.food.id) {
+    case 'shrimp':
+      if (Math.random() < 0.30) { p._msg = '🦐 虾倒退了！'; return -rnd(2, 6); }
+      return rnd(5, 20);
+
+    case 'miantiao':
+      if (Math.random() < 0.25) { p._msg = '🍜 猛嗦加速！'; return rnd(5, 20) * 1.75; }
+      return rnd(5, 20);
+
+    case 'rice':
+      return rnd(9, 15);
+
+    case 'takeout':
+      return rnd(2, 26);
+
+    case 'tangyuan':
+      if (Math.random() < 0.25) { p._msg = '🍡 粘住了！'; return 0; }
+      return rnd(5, 20);
+
+    case 'tea': {
+      const bonus = Math.min(p.jumps * 1.6, 13);
+      return rnd(5, 20) + bonus;
+    }
+
+    case 'mooncake':
+      if (p.jumps % 3 === 2) { p._msg = '🥮 月饼爆炸！'; return rnd(19, 24); }
+      return rnd(3, 11);
+
+    case 'bento':
+      return rnd(12, 23);
+
+    case 'bokchoy':
+      if (Math.random() < 0.15) { p._msg = '🥬 超级弹射！'; return rnd(23, 30); }
+      return rnd(5, 20);
+
+    case 'jiaozi':
+      if (Math.random() < 0.25) { p._msg = '🥟 蒸气双跳！'; return [rnd(5,20), rnd(4,10)]; }
+      return rnd(5, 20);
+
+    case 'hotpot':
+      if (Math.random() < 0.15) { p._msg = '🫕 蒸汽冻结！'; p._frozen = true; return 0; }
+      return rnd(5, 20);
+
+    case 'skewer':
+      return rnd(2, 27);
+
+    default:
+      return rnd(5, 20);
+  }
+}
+
+// =============================================
+// KEY HANDLER
+// =============================================
+function onKey(e) {
+  if (gs.over) return;
+  const p = gs.players.find(pl => pl.key === e.key.toLowerCase());
+  if (!p || p.status !== 'ready') return;
+
+  const now = Date.now();
+  if (now - p.lastJump < JUMP_COOLDOWN) return;
+  p.lastJump = now;
+
+  e.preventDefault();
+  p._msg = null;
+  p._frozen = false;
+
+  const amount = calcJump(p);
+  p.jumps++;
+
+  if (Array.isArray(amount)) {
+    playSoundForJump(p, amount[0]);
+    applyJump(p, amount[0], () => {
+      if (p.status === 'ready') {
+        setTimeout(() => {
+          playBoing(1.3, 0.35);
+          applyJump(p, amount[1]);
+        }, 320);
+      }
+    });
+  } else {
+    playSoundForJump(p, amount);
+    applyJump(p, amount);
+  }
+}
+
+// =============================================
+// APPLY JUMP
+// =============================================
+function applyJump(p, amount, cb) {
+  const foodEl = document.getElementById('food-' + p.id);
+  const msgEl  = document.getElementById('msg-' + p.id);
+  const laneEl = document.getElementById('lane-' + p.id);
+  const progEl = document.getElementById('prog-' + p.id);
+
+  if (replayStartTime === null) replayStartTime = Date.now();
+  const evT = Date.now() - replayStartTime;
+
+  laneEl.classList.add('flash-press');
+  setTimeout(() => laneEl.classList.remove('flash-press'), 180);
+
+  if (p._frozen) {
+    replayLog.push({ t: evT, pid: p.id, amount: 0, msg: p._msg, frozen: true, result: 'frozen' });
+    setMsg(msgEl, '❄️ 被冻住了！', 'info-msg');
+    triggerAnim(foodEl, 'anim-freeze', 800);
+    if (cb) setTimeout(cb, 800);
+    return;
+  }
+
+  const newPos = Math.max(0, p.pos + amount);
+
+  if (p._msg) setMsg(msgEl, p._msg, 'info-msg');
+
+  if (newPos >= WIN_POS) {
+    const alreadyWon = gs.players.some(pl => pl.status === 'won');
+    if (alreadyWon) {
+      replayLog.push({ t: evT, pid: p.id, amount, msg: p._msg, frozen: false, result: 'second' });
+      p.pos = 100;
+      p.status = 'done';
+      triggerAnim(foodEl, 'anim-jump', 420);
+      setTimeout(() => {
+        setFoodPos(p.id, 100);
+        laneEl.classList.add('done-lane');
+        setMsg(msgEl, '🥈 差一点！', 'info-msg');
+        progEl.style.width = '100%';
+      }, 420);
+      return;
+    }
+    replayLog.push({ t: evT, pid: p.id, amount, msg: p._msg, frozen: false, result: 'win' });
+    p.pos = 100;
+    p.status = 'won';
+    triggerAnim(foodEl, 'anim-jump', 420);
+    setTimeout(() => {
+      setFoodPos(p.id, 100);
+      foodEl.classList.remove('anim-jump');
+      void foodEl.offsetWidth;
+      foodEl.classList.add('anim-win');
+      laneEl.classList.add('won-lane');
+      setMsg(msgEl, '🥇 冲进碗里！', 'won-msg');
+      progEl.style.width = '100%';
+    }, 420);
+    setTimeout(() => endGame(p), 600);
+    return;
+  }
+
+  replayLog.push({ t: evT, pid: p.id, amount, msg: p._msg, frozen: false, result: 'jump' });
+  p.pos = newPos;
+  triggerAnim(foodEl, 'anim-jump', 420);
+  setTimeout(() => {
+    setFoodPos(p.id, p.pos);
+  }, 80);
+  progEl.style.width = p.pos + '%';
+
+  if (cb) setTimeout(cb, 420);
+}
+
+// =============================================
+// HELPERS
+// =============================================
+function triggerAnim(el, cls, dur) {
+  el.classList.remove('anim-jump','anim-overshoot','anim-win','anim-freeze');
+  void el.offsetWidth;
+  el.classList.add(cls);
+  if (cls !== 'anim-win') setTimeout(() => el.classList.remove(cls), dur);
+}
+
+function setMsg(el, text, cls) {
+  el.textContent = text;
+  el.className = 'lane-msg ' + cls;
+  if (cls !== 'won-msg' && cls !== 'out-msg') {
+    setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 1400);
+  }
+}
+
+// =============================================
+// WIN LOGIC
+// =============================================
+function checkTeamOut() {
+  if (gs.over) return;
+  const teams = {};
+  gs.players.forEach(p => (teams[p.team] = teams[p.team] || []).push(p));
+
+  for (const team in teams) {
+    if (teams[team].every(p => p.status === 'out')) {
+      const winner = gs.players.find(p => p.team !== team && p.status !== 'out');
+      if (winner) endGame(winner);
+      else showDraw();
+      return;
+    }
+  }
+}
+
+function endGame(winner) {
+  if (gs.over) return;
+  gs.over = true;
+  stopCpuAI();
+  sessionGames++;
+  document.removeEventListener('keydown', onKey);
+  playWin();
+  gs.players
+    .filter(p => p.team === winner.team && p.profile)
+    .forEach(p => addWin(p.profile.id));
+  finishCompositeRecording(winner).then(recId => setTimeout(() => showWinner(winner, recId), 600));
+}
+
+function showWinner(p, recId) {
+  replayWinner = p;
+  const profName = p.profile ? p.profile.name : `玩家 ${p.id}`;
+  const profEmoji = p.profile ? p.profile.emoji : '🏆';
+  document.getElementById('w-emoji').textContent = profEmoji;
+  document.getElementById('w-name').textContent = `${profName} 胜利！🎉`;
+
+  const teamLabels = { A:'队伍 🔴 胜利！', B:'队伍 🔵 胜利！', C:'队伍 🟢 胜利！' };
+  const subtitle = gs.players.length === 2
+    ? `${p.food.emoji} ${p.food.name} 抢到碗了！🥣`
+    : teamLabels[p.team] + ` · ${p.food.emoji} ${p.food.name}`;
+  document.getElementById('w-team').textContent = subtitle;
+
+  const limitReached = parentalLimit > 0 && sessionGames >= parentalLimit;
+  const replayBtnHtml = `<button class="btn" onclick="watchReplay()" style="background:linear-gradient(135deg,#533483,#7952b3);box-shadow:0 6px 20px rgba(83,52,131,0.4)">🎬 观看回放</button>`;
+  const recBtnHtml = recId != null
+    ? `<button class="btn" onclick="playRecordingModal(${recId})" style="background:linear-gradient(135deg,#1a5e4e,#2a9d8f);box-shadow:0 6px 20px rgba(26,94,78,0.4)">📹 观看录像</button>`
+    : '';
+  document.getElementById('winner-buttons').innerHTML = limitReached
+    ? `<button class="btn" onclick="showLockedScreen()" style="background:linear-gradient(135deg,#c1121f,#e63946)">🔒 游戏时间到</button>` + replayBtnHtml + recBtnHtml
+    : `<button class="btn btn-green" onclick="goTitle()">再来一局！</button>` + replayBtnHtml + recBtnHtml;
+
+  spawnConfetti();
+  showScreen('winner');
+}
+
+function showDraw() {
+  gs.over = true;
+  stopCpuAI();
+  document.removeEventListener('keydown', onKey);
+  finishCompositeRecording(null).then(recId => {
+    document.getElementById('w-emoji').textContent = '🥣';
+    document.getElementById('w-name').textContent = '没有人赢...';
+    document.getElementById('w-team').textContent = '碗还是空的！😅';
+    const recBtnHtml = recId != null
+      ? `<button class="btn" onclick="playRecordingModal(${recId})" style="background:linear-gradient(135deg,#1a5e4e,#2a9d8f);box-shadow:0 6px 20px rgba(26,94,78,0.4)">📹 观看录像</button>`
+      : '';
+    document.getElementById('winner-buttons').innerHTML =
+      `<button class="btn btn-green" onclick="goTitle()">再来一局！</button>` +
+      `<button class="btn" onclick="watchReplay()" style="background:linear-gradient(135deg,#533483,#7952b3);box-shadow:0 6px 20px rgba(83,52,131,0.4)">🎬 观看回放</button>` +
+      recBtnHtml;
+    showScreen('winner');
+  });
+}
+
+// =============================================
+// CONFETTI
+// =============================================
+function spawnConfetti() {
+  const layer = document.getElementById('confetti-layer');
+  layer.innerHTML = '';
+  const colors = ['#e63946','#ffd700','#f4a261','#51cf66','#74c0fc','#d0bfff','#f783ac','#ffec6e'];
+  for (let i = 0; i < 90; i++) {
+    const bit = document.createElement('div');
+    bit.className = 'conf-bit';
+    bit.style.cssText =
+      `left:${Math.random()*100}%;` +
+      `width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;` +
+      `background:${colors[Math.floor(Math.random()*colors.length)]};` +
+      `border-radius:${Math.random()>.5?'50%':'2px'};` +
+      `animation-duration:${1.4+Math.random()*2}s;` +
+      `animation-delay:${Math.random()*0.8}s;`;
+    layer.appendChild(bit);
+  }
+}
+
+// =============================================
+// REPLAY
+// =============================================
+function watchReplay() { stopCpuAI(); showReplay(1); }
+
+function showReplay(speed) {
+  replayTimers.forEach(t => clearTimeout(t));
+  replayTimers = [];
+
+  gs.players.forEach(p => { p.pos = 0; p.status = 'ready'; p.jumps = 0; });
+  buildGameScreen();
+  showScreen('game');
+
+  document.querySelector('.game-title').textContent = '🎬 回放';
+  const bar = document.getElementById('controls-bar');
+  bar.innerHTML =
+    `<span class="replay-speed-label">速度：</span>` +
+    [1, 2, 3].map(s =>
+      `<button class="replay-btn${speed === s ? ' active' : ''}" onclick="showReplay(${s})">${s}×</button>`
+    ).join('') +
+    `<div class="replay-progress-wrap"><div class="replay-progress-fill" id="replay-prog"></div></div>` +
+    `<button class="replay-btn exit-btn" onclick="showWinner(replayWinner)">✕ 返回</button>`;
+
+  const totalMs = replayLog.length ? replayLog[replayLog.length - 1].t : 0;
+
+  replayLog.forEach(ev => {
+    const t = replayTimers[replayTimers.push(setTimeout(() => {
+      const p = gs.players.find(pl => pl.id === ev.pid);
+      if (!p) return;
+      p._msg = ev.msg;
+      p._frozen = ev.frozen;
+      replayJump(p, ev.amount, ev.result);
+      const prog = document.getElementById('replay-prog');
+      if (prog) prog.style.width = (ev.t / totalMs * 100) + '%';
+    }, ev.t / speed))];
+  });
+
+  replayTimers.push(setTimeout(() => {
+    document.querySelector('.game-title').textContent = '🎬 回放结束！';
+    const prog = document.getElementById('replay-prog');
+    if (prog) { prog.style.width = '100%'; prog.style.background = '#51cf66'; }
+    document.getElementById('controls-bar').innerHTML =
+      `<button class="replay-btn active" onclick="showReplay(${speed})">▶ 再看一遍</button>` +
+      `<button class="replay-btn exit-btn" onclick="showWinner(replayWinner)">✕ 返回结果</button>`;
+  }, (totalMs + 1200) / speed));
+}
+
+function replayJump(p, amount, result) {
+  const foodEl = document.getElementById('food-' + p.id);
+  const msgEl  = document.getElementById('msg-' + p.id);
+  const laneEl = document.getElementById('lane-' + p.id);
+  const progEl = document.getElementById('prog-' + p.id);
+  if (!foodEl) return;
+
+  laneEl.classList.add('flash-press');
+  setTimeout(() => laneEl.classList.remove('flash-press'), 180);
+
+  if (result === 'frozen') {
+    playFreeze();
+    setMsg(msgEl, '❄️ 被冻住了！', 'info-msg');
+    triggerAnim(foodEl, 'anim-freeze', 800);
+    return;
+  }
+
+  if (result === 'second') {
+    p.pos = 100;
+    p.status = 'done';
+    triggerAnim(foodEl, 'anim-jump', 420);
+    setTimeout(() => {
+      setFoodPos(p.id, 100);
+      laneEl.classList.add('done-lane');
+      setMsg(msgEl, '🥈 差一点！', 'info-msg');
+      progEl.style.width = '100%';
+    }, 420);
+    return;
+  }
+
+  if (p._msg) setMsg(msgEl, p._msg, 'info-msg');
+  playSoundForJump(p, amount);
+
+  if (result === 'win') {
+    p.pos = 100;
+    p.status = 'won';
+    triggerAnim(foodEl, 'anim-jump', 420);
+    setTimeout(() => {
+      setFoodPos(p.id, 100);
+      foodEl.classList.remove('anim-jump');
+      void foodEl.offsetWidth;
+      foodEl.classList.add('anim-win');
+      laneEl.classList.add('won-lane');
+      setMsg(msgEl, '🏆 冲进碗里！', 'won-msg');
+      progEl.style.width = '100%';
+      playWin();
+    }, 420);
+    return;
+  }
+
+  p.pos = Math.max(0, p.pos + amount);
+  triggerAnim(foodEl, 'anim-jump', 420);
+  setTimeout(() => { setFoodPos(p.id, p.pos); }, 80);
+  progEl.style.width = p.pos + '%';
+}
+
+// =============================================
+// RESET
+// =============================================
+function goTitle() {
+  document.removeEventListener('keydown', onKey);
+  stopCpuAI();
+  stopRecording();
+  _cleanupRecording();
+  _recordedChunks = [];
+  gs = { players:[], selecting:0, taken:new Set(), profilesTaken:new Set(), over:false, track:null, willRecord:false };
+  renderLeaderboard();
+  renderPlaylist();
+  showScreen('title');
+}
+
+// =============================================
+// CAMERA RECORDING
+// =============================================
+async function startRecording() {
+  _recordedChunks = [];
+  try {
+    _recordingStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: true,
+    });
+    const preview = document.getElementById('cam-preview');
+    preview.srcObject = _recordingStream;
+    preview.play().catch(() => {});
+
+    const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4']
+      .find(t => { try { return MediaRecorder.isTypeSupported(t); } catch { return false; } }) || '';
+    _mediaRecorder = new MediaRecorder(_recordingStream, mimeType ? { mimeType } : {});
+    _mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) _recordedChunks.push(e.data); };
+    _mediaRecorder.start(500);
+    document.getElementById('cam-container').classList.add('active');
+    document.getElementById('cam-container').classList.remove('minimized');
+  } catch (err) {
+    const msg = err.name === 'NotAllowedError'
+      ? '📷 摄像头被拒绝 — 浏览器设置 → 网站权限 → 摄像头 → 允许 localhost'
+      : err.name === 'NotFoundError'
+      ? '📷 未检测到摄像头 — 请连接摄像头后重试'
+      : `📷 摄像头不可用 (${err.name}) — 录制已跳过`;
+    const toast = document.getElementById('cam-denied-toast');
+    document.getElementById('cam-denied-msg').textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 6000);
+  }
+}
+
+function stopRecording() {
+  return new Promise(resolve => {
+    document.getElementById('cam-container').classList.remove('active');
+    if (_recordingStream) {
+      _recordingStream.getTracks().forEach(t => t.stop());
+      _recordingStream = null;
+    }
+    if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+      _mediaRecorder.onstop = resolve;
+      _mediaRecorder.stop();
+    } else {
+      resolve();
+    }
+  });
+}
+
+function downloadRecording() {
+  if (!_recordedChunks.length) return;
+  const type = (_mediaRecorder && _mediaRecorder.mimeType) || 'video/webm';
+  const ext  = type.includes('mp4') ? 'mp4' : 'webm';
+  const blob = new Blob(_recordedChunks, { type });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const now  = new Date();
+  const ts   = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+  a.href = url;
+  a.download = `美食大冲关_${ts}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function toggleCamMin() {
+  document.getElementById('cam-container').classList.toggle('minimized');
+}
+
+// =============================================
+// COUNTDOWN SOUNDS
+// =============================================
+function playCountdownBeep(num) {
+  try {
+    const ctx = getAudioCtx();
+    const freq = 300 + (6 - num) * 80;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(0.5, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2); gain2.connect(ctx.destination);
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(freq * 2, ctx.currentTime);
+    gain2.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+    osc2.start(ctx.currentTime);
+    osc2.stop(ctx.currentTime + 0.08);
+  } catch(e) {}
+}
+
+function playGoFanfare() {
+  try {
+    const ctx = getAudioCtx();
+    const notes = [
+      { freq: 523, t: 0,    dur: 0.12 },
+      { freq: 659, t: 0.1,  dur: 0.12 },
+      { freq: 784, t: 0.2,  dur: 0.12 },
+      { freq: 1047,t: 0.3,  dur: 0.5  },
+    ];
+    notes.forEach(({ freq, t, dur }) => {
+      ['sine','triangle'].forEach((type, j) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq * (j === 1 ? 1.5 : 1), ctx.currentTime + t);
+        gain.gain.setValueAtTime(j === 0 ? 0.55 : 0.2, ctx.currentTime + t);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + dur + 0.05);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + dur + 0.1);
+      });
+    });
+  } catch(e) {}
+}
+
+// =============================================
+// AUDIO ENGINE
+// =============================================
+let _audioCtx = null;
+function getAudioCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+
+function playBoing(pitch = 1, volume = 0.45) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(280 * pitch, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(140 * pitch, ctx.currentTime + 0.32);
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.38);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.4);
+  } catch(e) {}
+}
+
+function playOvershoot() {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sawtooth';
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2000, ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.5);
+    osc.frequency.setValueAtTime(400, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.55);
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.65);
+  } catch(e) {}
+}
+
+function playFreeze() {
+  try {
+    const ctx = getAudioCtx();
+    const times = [0, 0.06, 0.12, 0.18, 0.24];
+    const freqs = [1200, 1600, 1400, 1800, 1000];
+    times.forEach((t, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freqs[i], ctx.currentTime + t);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.15);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.18);
+    });
+  } catch(e) {}
+}
+
+function playSlurpBoost() {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(180, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(520, ctx.currentTime + 0.15);
+    osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.38);
+    gain.gain.setValueAtTime(0.5, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.42);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.45);
+  } catch(e) {}
+}
+
+function playSugarRush() {
+  try {
+    playBoing(1.8, 0.65);
+    const ctx = getAudioCtx();
+    setTimeout(() => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.28);
+    }, 80);
+  } catch(e) {}
+}
+
+function playMegaLaunch() {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(100, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.4);
+    gain.gain.setValueAtTime(0.6, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.48);
+  } catch(e) {}
+}
+
+function playCrabBack() {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(220, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.25);
+    gain.gain.setValueAtTime(0.35, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.32);
+  } catch(e) {}
+}
+
+function playDoubleJump() {
+  try {
+    playBoing(1, 0.4);
+    setTimeout(() => playBoing(1.3, 0.35), 230);
+  } catch(e) {}
+}
+
+function playWin() {
+  try {
+    const ctx = getAudioCtx();
+    const notes = [
+      { freq: 523.25, t: 0,    dur: 0.15 },
+      { freq: 659.25, t: 0.15, dur: 0.15 },
+      { freq: 783.99, t: 0.30, dur: 0.15 },
+      { freq: 1046.5, t: 0.45, dur: 0.45 },
+    ];
+    notes.forEach(({ freq, t, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + t);
+      gain.gain.setValueAtTime(0.5, ctx.currentTime + t);
+      gain.gain.setValueAtTime(0.5, ctx.currentTime + t + dur - 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + dur + 0.05);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + dur + 0.1);
+    });
+    const harmNotes = [
+      { freq: 392.00, t: 0,    dur: 0.15 },
+      { freq: 493.88, t: 0.15, dur: 0.15 },
+      { freq: 587.33, t: 0.30, dur: 0.15 },
+      { freq: 783.99, t: 0.45, dur: 0.45 },
+    ];
+    harmNotes.forEach(({ freq, t, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + t);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + dur + 0.08);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + dur + 0.12);
+    });
+  } catch(e) {}
+}
+
+function playSoundForJump(p, amount) {
+  if (!p || !p.food) return;
+  const id = p.food.id;
+  if (p._frozen) { playFreeze(); return; }
+  if (amount === 0) return;
+  if (id === 'shrimp' && amount < 0) { playCrabBack(); return; }
+  if (id === 'miantiao' && p._msg && p._msg.includes('猛嗦')) { playSlurpBoost(); return; }
+  if (id === 'mooncake' && p._msg && p._msg.includes('月饼')) { playSugarRush(); return; }
+  if (id === 'bokchoy' && p._msg && p._msg.includes('超级')) { playMegaLaunch(); return; }
+  if (id === 'jiaozi' && Array.isArray(amount)) { playDoubleJump(); return; }
+  if (id === 'tea') { playBoing(1 + Math.min(p.jumps * 0.04, 0.4), 0.42); return; }
+  if (id === 'skewer') { playBoing(0.8 + Math.random() * 0.8, 0.44); return; }
+  if (id === 'takeout') { playBoing(0.7 + Math.random() * 0.6, 0.43); return; }
+  if (id === 'bento') { playBoing(0.75, 0.5); return; }
+  playBoing(1, 0.42);
+}
+
+// =============================================
+// 自定义玩家管理
+// =============================================
+const PM_EMOJIS = ['😀','😎','🤩','🥳','😜','🤓','😈','👻','🐱','🐶','🐭','🐰','🦊','🐻','🐼','🐯','🐸','🦁','🐺','🦋','🌟','⭐','🔥','❄️','🌈','💎','🎮','🎯'];
+const PM_COLORS = ['#f783ac','#74c0fc','#51cf66','#ffd43b','#ff922b','#cc5de8','#ff6b6b','#20c997','#4dabf7','#94d82d'];
+let _pmSelectedEmoji = PM_EMOJIS[0];
+let _pmSelectedColor = PM_COLORS[0];
+
+let _pmEditingId = null;
+
+function showAddProfileModal() {
+  _pmEditingId = null;
+  document.getElementById('pm-title').textContent = '➕ 添加玩家';
+  document.querySelector('.pm-btn-save').textContent = '保存';
+  _openProfileModal(PM_EMOJIS[0], PM_COLORS[0], '');
+}
+
+function showEditProfileModal(id) {
+  const prof = PROFILES.find(p => p.id === id);
+  if (!prof) return;
+  _pmEditingId = id;
+  document.getElementById('pm-title').textContent = '✎ 编辑玩家';
+  document.querySelector('.pm-btn-save').textContent = '保存修改';
+  _openProfileModal(prof.emoji, prof.color, prof.name);
+}
+
+function _openProfileModal(emoji, color, name) {
+  _pmSelectedEmoji = emoji;
+  _pmSelectedColor = color;
+  document.getElementById('pm-name-input').value = name;
+  const emojiGrid = document.getElementById('pm-emoji-grid');
+  emojiGrid.innerHTML = '';
+  PM_EMOJIS.forEach(em => {
+    const btn = document.createElement('button');
+    btn.className = 'pm-emoji-btn' + (em === _pmSelectedEmoji ? ' selected' : '');
+    btn.textContent = em;
+    btn.onclick = () => {
+      _pmSelectedEmoji = em;
+      emojiGrid.querySelectorAll('.pm-emoji-btn').forEach(b => b.classList.toggle('selected', b.textContent === em));
+    };
+    emojiGrid.appendChild(btn);
+  });
+  const colorGrid = document.getElementById('pm-color-grid');
+  colorGrid.innerHTML = '';
+  PM_COLORS.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'pm-color-swatch' + (c === _pmSelectedColor ? ' selected' : '');
+    sw.style.background = c;
+    sw.onclick = () => {
+      _pmSelectedColor = c;
+      colorGrid.querySelectorAll('.pm-color-swatch').forEach(s => s.classList.toggle('selected', s.style.background === c));
+    };
+    colorGrid.appendChild(sw);
+  });
+  document.getElementById('profile-modal-overlay').classList.add('active');
+  setTimeout(() => document.getElementById('pm-name-input').focus(), 100);
+}
+
+function hideAddProfileModal() {
+  document.getElementById('profile-modal-overlay').classList.remove('active');
+}
+
+function confirmAddProfile() {
+  const name = document.getElementById('pm-name-input').value.trim();
+  if (!name) { document.getElementById('pm-name-input').focus(); return; }
+
+  if (_pmEditingId) {
+    const isDefault = PROFILES_DEFAULT.some(p => p.id === _pmEditingId);
+    if (isDefault) {
+      const overrides = loadProfileOverrides();
+      overrides[_pmEditingId] = { name, emoji: _pmSelectedEmoji, color: _pmSelectedColor };
+      saveProfileOverrides(overrides);
+    } else {
+      const customs = loadCustomProfiles().map(p =>
+        p.id === _pmEditingId ? { ...p, name, emoji: _pmSelectedEmoji, color: _pmSelectedColor } : p
+      );
+      saveCustomProfiles(customs);
+    }
+  } else {
+    const id = 'custom_' + Date.now();
+    const prof = { id, name, emoji: _pmSelectedEmoji, color: _pmSelectedColor, custom: true };
+    const customs = loadCustomProfiles();
+    customs.push(prof);
+    saveCustomProfiles(customs);
+  }
+
+  PROFILES = buildProfileList();
+  hideAddProfileModal();
+  buildProfileGrid();
+}
+
+function deleteCustomProfile(id) {
+  const customs = loadCustomProfiles().filter(p => p.id !== id);
+  saveCustomProfiles(customs);
+  PROFILES = buildProfileList();
+  buildProfileGrid();
+}
+
+// =============================================
+// RECORD CONSENT
+// =============================================
+function showRecordConsent() {
+  showScreen('record-consent');
+}
+
+async function chooseRecord(wantRecord) {
+  gs.willRecord = false;
+  if (wantRecord) {
+    const ok = await startCompositeRecording();
+    gs.willRecord = ok;
+  }
+  startGame();
+}
+
+// =============================================
+// COMPOSITE RECORDING
+// =============================================
+function _safeRoundRect(ctx, x, y, w, h, r) {
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r);
+  } else {
+    ctx.rect(x, y, w, h);
+  }
+}
+
+async function startCompositeRecording() {
+  _compChunks = [];
+  try {
+    // 1) 屏幕录制
+    _screenStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 30, preferCurrentTab: true },
+      audio: false,
+    });
+    const screenVid = document.getElementById('screen-cap-vid');
+    screenVid.srcObject = _screenStream;
+    await new Promise(r => { screenVid.onloadedmetadata = r; setTimeout(r, 2000); });
+    screenVid.play().catch(() => {});
+
+    // 2) 摄像头 + 麦克风
+    _camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: true,
+    });
+    const camPrev = document.getElementById('cam-preview');
+    camPrev.srcObject = _camStream;
+    camPrev.play().catch(() => {});
+    document.getElementById('cam-container').classList.add('active');
+    document.getElementById('cam-container').classList.remove('minimized');
+
+    // 3) 画布合成循环
+    const canvas = document.getElementById('compose-canvas');
+    canvas.width = 1280;
+    canvas.height = 720;
+    const ctx = canvas.getContext('2d');
+
+    function composeFrame() {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, 1280, 720);
+      if (screenVid.readyState >= 2) {
+        ctx.drawImage(screenVid, 0, 0, 1280, 720);
+      }
+      const camVid = document.getElementById('cam-preview');
+      if (camVid && camVid.readyState >= 2 && _camStream) {
+        const CW = 284, CH = 213;
+        const CX = 1280 - CW - 20, CY = 720 - CH - 20;
+        ctx.save();
+        ctx.beginPath();
+        _safeRoundRect(ctx, CX, CY, CW, CH, 12);
+        ctx.clip();
+        ctx.translate(CX + CW, CY);
+        ctx.scale(-1, 1);
+        ctx.drawImage(camVid, 0, 0, CW, CH);
+        ctx.restore();
+        ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        _safeRoundRect(ctx, CX, CY, CW, CH, 12);
+        ctx.stroke();
+      }
+      _compRAF = requestAnimationFrame(composeFrame);
+    }
+    composeFrame();
+
+    // 4) 录制画布流 + 麦克风音频
+    const canvasStream = canvas.captureStream(30);
+    const micTrack = _camStream.getAudioTracks()[0];
+    if (micTrack) canvasStream.addTrack(micTrack);
+
+    const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4']
+      .find(t => { try { return MediaRecorder.isTypeSupported(t); } catch { return false; } }) || '';
+    _compRec = new MediaRecorder(canvasStream, mimeType ? { mimeType } : {});
+    _compRec.ondataavailable = e => { if (e.data && e.data.size > 0) _compChunks.push(e.data); };
+    _compRec.start(500);
+    return true;
+  } catch (err) {
+    const msgMap = {
+      NotAllowedError: '📷 屏幕或摄像头权限被拒绝 — 将直接开始游戏',
+      NotFoundError: '📷 未找到摄像头 — 将直接开始游戏',
+    };
+    const toast = document.getElementById('cam-denied-toast');
+    document.getElementById('cam-denied-msg').textContent = msgMap[err.name] || `📷 录制不可用 (${err.name})`;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 5000);
+    _cleanupRecording();
+    return false;
+  }
+}
+
+function _cleanupRecording() {
+  if (_compRAF) { cancelAnimationFrame(_compRAF); _compRAF = null; }
+  if (_screenStream) { _screenStream.getTracks().forEach(t => t.stop()); _screenStream = null; }
+  if (_camStream) { _camStream.getTracks().forEach(t => t.stop()); _camStream = null; }
+  document.getElementById('cam-container').classList.remove('active');
+}
+
+function _stopRecorder() {
+  return new Promise(resolve => {
+    if (!_compRec || _compRec.state === 'inactive') { resolve(); return; }
+    _compRec.onstop = resolve;
+    _compRec.stop();
+  });
+}
+
+async function finishCompositeRecording(winnerPlayer) {
+  if (!gs.willRecord) return null;
+  const canvas = document.getElementById('compose-canvas');
+  const thumb = (canvas.width > 0 && _compRec) ? canvas.toDataURL('image/jpeg', 0.35) : null;
+  const mimeType = _compRec?.mimeType || 'video/webm';
+  _cleanupRecording();
+  await _stopRecorder();
+  _compRec = null;
+  if (!_compChunks.length) return null;
+  const blob = new Blob(_compChunks, { type: mimeType });
+  _compChunks = [];
+  const id = Date.now();
+  const meta = {
+    id,
+    date: new Date().toISOString(),
+    thumb,
+    mimeType,
+    players: gs.players.filter(p => p.profile).map(p => ({ name: p.profile.name, emoji: p.profile.emoji })),
+    winner: winnerPlayer?.profile
+      ? { name: winnerPlayer.profile.name, emoji: winnerPlayer.profile.emoji, food: winnerPlayer.food?.emoji || '' }
+      : { name: '平局', emoji: '🥣', food: '' },
+  };
+  await saveBlobToDB(id, blob);
+  const all = loadRecordingsMeta();
+  all.push(meta);
+  saveRecordingsMeta(all);
+  return id;
+}
+
+// =============================================
+// INDEXEDDB — BLOB STORAGE
+// =============================================
+const REC_DB_NAME = 'FoodBowlRushDB';
+let _recDB = null;
+
+async function initRecDB() {
+  return new Promise(resolve => {
+    const req = indexedDB.open(REC_DB_NAME, 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('blobs')) db.createObjectStore('blobs', { keyPath: 'id' });
+    };
+    req.onsuccess = e => { _recDB = e.target.result; resolve(); };
+    req.onerror = () => resolve();
+  });
+}
+
+function saveBlobToDB(id, blob) {
+  if (!_recDB) return Promise.resolve();
+  return new Promise(resolve => {
+    const tx = _recDB.transaction('blobs', 'readwrite');
+    tx.objectStore('blobs').put({ id, blob });
+    tx.oncomplete = resolve; tx.onerror = resolve;
+  });
+}
+
+function getBlobFromDB(id) {
+  if (!_recDB) return Promise.resolve(null);
+  return new Promise(resolve => {
+    const tx = _recDB.transaction('blobs', 'readonly');
+    const req = tx.objectStore('blobs').get(id);
+    req.onsuccess = e => resolve(e.target.result?.blob || null);
+    req.onerror = () => resolve(null);
+  });
+}
+
+function deleteBlobFromDB(id) {
+  if (!_recDB) return Promise.resolve();
+  return new Promise(resolve => {
+    const tx = _recDB.transaction('blobs', 'readwrite');
+    tx.objectStore('blobs').delete(id);
+    tx.oncomplete = resolve; tx.onerror = resolve;
+  });
+}
+
+// =============================================
+// RECORDING METADATA (localStorage)
+// =============================================
+const REC_META_KEY = 'foodBowlRush_recordings';
+
+function loadRecordingsMeta() {
+  try { return JSON.parse(localStorage.getItem(REC_META_KEY) || '[]'); } catch { return []; }
+}
+
+function saveRecordingsMeta(arr) {
+  localStorage.setItem(REC_META_KEY, JSON.stringify(arr.slice(-20)));
+}
+
+// =============================================
+// PLAYLIST
+// =============================================
+function renderPlaylist() {
+  const meta = loadRecordingsMeta().slice().reverse();
+  const section = document.getElementById('playlist-section');
+  const list = document.getElementById('playlist-list');
+  if (!meta.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  list.innerHTML = meta.map(r => {
+    const d = new Date(r.date);
+    const dateStr = d.toLocaleDateString('zh-CN', { month:'short', day:'numeric' }) + ' ' + d.toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' });
+    const players = (r.players || []).map(p => p.emoji).join('');
+    const winnerStr = r.winner ? `🏆 ${r.winner.emoji} ${r.winner.name} ${r.winner.food || ''}` : '';
+    const thumbHtml = r.thumb ? `<img class="playlist-thumb" src="${r.thumb}" alt="">` : `<div class="playlist-thumb" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:1.4rem">🎬</div>`;
+    return `<div class="playlist-item" onclick="playRecordingModal(${r.id})">
+      ${thumbHtml}
+      <div class="playlist-info">
+        <div class="playlist-date">${dateStr}</div>
+        <div class="playlist-players">${players}</div>
+        <div class="playlist-winner">${winnerStr}</div>
+      </div>
+      <button class="playlist-del" onclick="event.stopPropagation();deleteRecording(${r.id})">🗑️</button>
+    </div>`;
+  }).join('');
+}
+
+async function playRecordingModal(id) {
+  const blob = await getBlobFromDB(id);
+  if (!blob) { alert('未找到录像 — 可能已被浏览器清除。'); return; }
+  const url = URL.createObjectURL(blob);
+  const vid = document.getElementById('video-modal-player');
+  vid.src = url;
+  vid.onended = () => URL.revokeObjectURL(url);
+  document.getElementById('video-modal').classList.add('active');
+  vid.play().catch(() => {});
+}
+
+function closeVideoModal() {
+  const vid = document.getElementById('video-modal-player');
+  vid.pause();
+  if (vid.src) { URL.revokeObjectURL(vid.src); vid.src = ''; }
+  document.getElementById('video-modal').classList.remove('active');
+}
+
+async function deleteRecording(id) {
+  await deleteBlobFromDB(id);
+  const all = loadRecordingsMeta().filter(r => r.id !== id);
+  saveRecordingsMeta(all);
+  renderPlaylist();
+}
+</script>
+</body>
+</html>
